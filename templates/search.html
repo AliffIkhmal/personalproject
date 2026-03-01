@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - Vehicle Service Tracking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: linear-gradient(rgba(15, 12, 41, 0.4), rgba(48, 43, 99, 0.4)),
+                         url('{{ url_for("static", filename="car-repair-maintenance-theme.jpg") }}')
+                         center / cover no-repeat fixed !important;
+        }
+        .search-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+        .search-center.has-results {
+            min-height: auto;
+            justify-content: flex-start;
+            padding: 2rem 1rem 1rem;
+        }
+        .search-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .search-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.95rem;
+            margin-bottom: 3rem;
+        }
+        .google-search-bar {
+            width: 100%;
+            max-width: 620px;
+            position: relative;
+        }
+        .google-search-bar input {
+            width: 100%;
+            padding: 1rem 3.5rem 1rem 3.25rem;
+            border: none;
+            border-radius: 999px;
+            font-size: 1.05rem;
+            font-family: 'Roboto', sans-serif;
+            background: rgba(255,255,255,0.95);
+            color: #1a1a2e;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .google-search-bar input:focus {
+            box-shadow: 0 6px 30px rgba(102,126,234,0.3), 0 2px 8px rgba(0,0,0,0.12);
+            background: #fff;
+        }
+        .google-search-bar input::placeholder {
+            color: #94a3b8;
+        }
+        .google-search-icon {
+            position: absolute;
+            left: 1.15rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .google-search-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: #94a3b8;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .google-search-bar button.search-inside-btn {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+            transition: all 0.2s ease;
+        }
+        .google-search-bar button.search-inside-btn:hover {
+            box-shadow: 0 4px 16px rgba(102,126,234,0.45);
+            transform: translateY(-50%) scale(1.05);
+        }
+        .google-search-bar button.search-inside-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: white;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        /* Results area */
+        .search-results-strip {
+            width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .results-count {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            padding-left: 0.25rem;
+        }
+        .result-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 16px;
+            padding: 1.15rem 1.5rem;
+            margin-bottom: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
+            gap: 1rem;
+        }
+        .result-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+            transform: translateY(-2px);
+        }
+        .result-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .result-vehicle {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #1a1a2e;
+            margin-bottom: 0.2rem;
+        }
+        .result-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .result-meta .plate {
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .result-meta .dot-sep {
+            color: #cbd5e1;
+        }
+        .result-card .btn-action {
+            flex-shrink: 0;
+        }
+        .no-results-msg {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: rgba(255,255,255,0.7);
+            font-size: 1rem;
+        }
+        .no-results-msg span {
+            display: block;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 600px) {
+            .search-title { font-size: 1.5rem; }
+            .result-card { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Navigation Bar (only show if logged in) -->
+        {% if session.get('user_id') %}
+        <nav class="navbar fade-in">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <a href="{{ url_for('dashboard') }}" class="back-arrow" title="Back to Dashboard"><img src="{{ url_for('static', filename='back_button.png') }}" alt="Back" style="width: 24px; height: 24px; object-fit: contain;"></a>
+                <div class="nav-brand"> <span>Tracking</span></div>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('search') }}" class="nav-link active">Search</a>
+            </div>
+            <div class="nav-user">
+                <span class="user-name">{{ session['username'] }}</span>
+                <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+            </div>
+        </nav>
+        {% endif %}
+
+        <!-- Search (hide when viewing a single record) -->
+        {% if session.get('user_id') and not record %}
+        <div class="search-center fade-in {% if results is defined and results is not none %}has-results{% endif %}">
+            <h1 class="search-title">Vehicle Search</h1>
+            
+
+            <form method="GET" action="{{ url_for('search') }}" class="google-search-bar" style="margin: 0 auto;">
+                <span class="google-search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                <input type="text" name="q" placeholder="Search by plate number or customer name..." value="{{ query or '' }}" autocomplete="off">
+                <button type="submit" class="search-inside-btn" title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Search Results (hide when viewing a single record) -->
+        {% if results is defined and results is not none and not record %}
+        <div class="search-results-strip fade-in">
+            <p class="results-count">About {{ results|length }} result{{ 's' if results|length != 1 }} for "{{ query }}"</p>
+
+            {% if results|length > 0 %}
+                {% for record in results %}
+                <div class="result-card">
+                    <div class="result-info">
+                        <div class="result-vehicle">{{ record['vehicle_name'] }}</div>
+                        <div class="result-meta">
+                            <span class="plate">{{ record['license_plate'] }}</span>
+                            <span class="dot-sep">·</span>
+                            <span>{{ record['service_type'] }}</span>
+                            <span class="dot-sep">·</span>
+                            {% if record['status'] == 'in_progress' %}
+                                <span class="status-badge status-in_progress">In Progress</span>
+                            {% elif record['status'] == 'completed' %}
+                                <span class="status-badge status-completed">Completed</span>
+                            {% else %}
+                                <span class="status-badge status-pending">Pending</span>
+                            {% endif %}
+                            {% if record['customer_name'] %}
+                                <span class="dot-sep">·</span>
+                                <span>{{ record['customer_name'] }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('view_record', record_id=record['id']) }}" class="btn-action btn-view" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none;">View</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-results-msg">
+                    <span>🔍</span>
+                    No records found for "{{ query }}"
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Single Record Details (shown when viewing one record) -->
+        {% if record %}
+        <div class="card fade-in" style="margin-top: 2rem;">
+            <h2 class="card-header">Service Record Details</h2>
+
+            <!-- Uploaded Image (toggle button) - moved below technician notes -->
+
+            <!-- Vehicle Info -->
+            <div class="detail-section">
+                <div class="detail-header">Vehicle Information</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Vehicle</span>
+                        <span class="detail-value">{{ record['vehicle_name'] }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">License Plate</span>
+                        <span class="detail-value">{{ record['license_plate'] }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Service Type</span>
+                        <span class="detail-value">{{ record['service_type'] }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        {% if record['status'] == 'in_progress' %}
+                            <span class="status-badge status-in_progress">In Progress</span>
+                        {% elif record['status'] == 'completed' %}
+                            <span class="status-badge status-completed">Completed</span>
+                        {% else %}
+                            <span class="status-badge status-pending">Pending</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Info -->
+            {% if record['customer_name'] %}
+            <div class="detail-section">
+                <div class="detail-header">Customer Information</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Name</span>
+                        <span class="detail-value">{{ record['customer_name'] }}</span>
+                    </div>
+                    {% if record['customer_phone'] %}
+                    <div class="detail-item">
+                        <span class="detail-label">Phone</span>
+                        <span class="detail-value">{{ record['customer_phone'] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if record['notes'] %}
+            <div class="detail-section">
+                <div class="detail-header">Technician Notes</div>
+                <div class="notes-box" style="white-space: pre-line;">
+                    {{ record['notes'] }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Record Metadata -->
+            <div class="detail-section">
+                <div class="detail-header">Record Info</div>
+                <div class="detail-grid">
+                    {% if record['technician_name'] is defined and record['technician_name'] %}
+                    <div class="detail-item">
+                        <span class="detail-label">Technician</span>
+                        <span class="detail-value">{{ record['technician_name'] }}</span>
+                    </div>
+                    {% endif %}
+                    {% if record['estimated_completion'] %}
+                    <div class="detail-item">
+                        <span class="detail-label">Est. Completion</span>
+                        <span class="detail-value">{{ record['estimated_completion'] }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="detail-item">
+                        <span class="detail-label">Created at</span>
+                        <span class="detail-value">{{ record['created_at'] }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Updated</span>
+                        <span class="detail-value">{{ record['updated_at'] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back Button -->
+            <div style="margin-top: 2rem; text-align: center;">
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="display: inline-block; width: auto; padding: 0.75rem 2rem; text-decoration: none;">Back to Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-primary" style="display: inline-block; width: auto; padding: 0.75rem 2rem; text-decoration: none;">Back to Login</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

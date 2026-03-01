@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        body {
+            background: linear-gradient(rgba(15, 12, 41, 0.4), rgba(48, 43, 99, 0.4)),
+                         url('{{ url_for("static", filename="car-repair-maintenance-theme.jpg") }}')
+                         center / cover no-repeat fixed !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background Bubbles -->
+    <div class="bg-bubbles">
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+        <div class="bubble"><div class="dot"></div></div>
+    </div>
+
+    <div class="container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+        <div class="card login-card fade-in">
+
+            <h1 class="card-header" style="text-align: center; justify-content: center;">Login</h1>
+            <p class="login-subtitle">Sign in to manage service records</p>
+
+            <!-- Show flash messages (success, error, etc.) -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Tabs: Technician or Customer -->
+            <div class="login-tabs">
+                <button class="tab-btn active" id="techTab" onclick="switchTab('technician')">
+                    <img src="{{ url_for('static', filename='mechanic.png') }}" alt="Technician" style="width: 22px; height: 22px; vertical-align: middle; margin-right: 6px;"> Technician
+                </button>
+                <button class="tab-btn" id="custTab" onclick="switchTab('customer')">
+                    <img src="{{ url_for('static', filename='customer.png') }}" alt="Customer" style="width: 22px; height: 22px; vertical-align: middle; margin-right: 6px;"> Customer
+                </button>
+            </div>
+
+            <!-- Technician Login Form -->
+            <form id="technicianForm" method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="username" class="form-input" placeholder="Enter your username" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-input" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+
+            <!-- Customer Lookup Form -->
+            <form id="customerForm" style="display: none;" method="POST" action="{{ url_for('customer_lookup') }}">
+                <div class="form-group">
+                    <label class="form-label">Plate Number</label>
+                    <input type="text" name="license_plate" class="form-input" placeholder="e.g. ABC1234" required style="text-transform: uppercase;">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Check Status</button>
+            </form>
+
+            <div class="login-footer">
+                <p style="margin-top: 0.5rem;">Vehicle Records Management System &copy; 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple function to switch between Technician and Customer tabs
+        function switchTab(tab) {
+            if (tab === 'technician') {
+                document.getElementById('technicianForm').style.display = 'block';
+                document.getElementById('customerForm').style.display = 'none';
+                document.getElementById('techTab').classList.add('active');
+                document.getElementById('custTab').classList.remove('active');
+            } else {
+                document.getElementById('technicianForm').style.display = 'none';
+                document.getElementById('customerForm').style.display = 'block';
+                document.getElementById('techTab').classList.remove('active');
+                document.getElementById('custTab').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

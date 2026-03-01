@@ -1,0 +1,169 @@
+========================================
+  CAR REPAIR MANAGEMENT SYSTEM
+========================================
+
+A web-based system that allows automotive technicians
+to record car information, update repair status, and add notes,
+while customers can check the progress of their vehicle repairs.
+
+
+========================================
+  TECHNOLOGIES USED
+========================================
+
+- Python (Flask)      — Web framework for handling pages and forms
+- SQLite              — Database to store all records (built into Python)
+- HTML/CSS/JavaScript — Frontend (what the user sees in the browser)
+
+
+========================================
+  HOW THE SYSTEM WORKS
+========================================
+
+The system has two types of users:
+
+  1. TECHNICIAN — Logs in with a username and password.
+     Can add cars, update repair status, add notes, and search records.
+
+  2. CUSTOMER — No login needed.
+     Can look up their car's repair status using their license plate number.
+
+
+========================================
+  SYSTEM PAGES
+========================================
+
+1. LOGIN PAGE (login.html)
+   - Technician enters username and password to log in.
+   - Customer enters their license plate number to check status.
+
+2. DASHBOARD PAGE (dashboard.html)
+   - Shows stats: how many cars are Active, Pending, and Completed.
+   - Shows a table of all service records.
+   - Technician can filter records by status.
+   - Technician can click "Add Record" to add a new car.
+   - Technician can click "Update" to change a car's repair status.
+   - Technician can click "View" to see full details of a record.
+
+3. SEARCH PAGE (search.html)
+   - Technician can search by license plate, car name, or customer name.
+   - Also shows full details when viewing a single record.
+   - Customers see their car details here after looking up a plate.
+
+
+========================================
+  USE CASES
+========================================
+
+Technician
+   ├── Log In / Log Out
+   ├── Add New Car Record
+   ├── View All Car Records
+   ├── Update Repair Status (Pending → In Progress → Completed)
+   ├── Add Notes to a Record
+   ├── Search for a Car Record
+   └── View Full Record Details
+
+Customer
+   ├── Search Car by License Plate (from Login page)
+   └── View Repair Status and Notes
+
+
+========================================
+  TECHNICIAN WORKFLOW (Step by Step)
+========================================
+
+1. Technician opens the website and sees the Login page.
+
+2. Technician enters their username and password and clicks "Sign In".
+
+3. After logging in, the Dashboard page appears showing:
+   - Stats cards (Active, Pending, Completed counts)
+   - A table of all service records
+
+4. Technician clicks "+ Add Record" and fills out:
+   - Vehicle Name        (e.g. Honda Civic 2024)
+   - License Plate       (e.g. ABC-1234)
+   - Service Type        (e.g. Oil Change, Brake Repair)
+   - Status              (Pending, In Progress, or Completed)
+   - Customer Name       (optional)
+   - Customer Phone      (optional)
+   - Estimated Completion (optional)
+   - Notes               (optional)
+
+5. Technician clicks "Save Record" — the car is saved to the database.
+
+6. Technician can click "Update" on any record to change its status
+   and add a note about the update.
+
+7. Technician can click "View" on any record to see full details.
+
+8. Technician can use the Search page to find records by plate number,
+   vehicle name, or customer name.
+
+9. Technician clicks "Logout" when done.
+
+
+========================================
+  CUSTOMER WORKFLOW (Step by Step)
+========================================
+
+1. Customer opens the website and sees the Login page.
+
+2. Customer clicks the "Customer" tab.
+
+3. Customer enters their license plate number (e.g. ABC-1234).
+
+4. Customer clicks "Check Status".
+
+5. The system shows the car's details:
+   - Vehicle name
+   - License plate
+   - Service type
+   - Current repair status (Pending / In Progress / Completed)
+   - Customer info
+   - Technician notes
+
+6. Customer can click "Back to Login" to return.
+
+
+========================================
+  DATABASE TABLES
+========================================
+
+Table: technicians
+   - id         (auto number)
+   - username   (text, unique)
+   - password   (text, hashed for security)
+
+Table: service_records
+   - id                   (auto number)
+   - vehicle_name         (text — e.g. "Honda Civic 2024")
+   - license_plate        (text — e.g. "ABC-1234")
+   - service_type         (text — e.g. "Oil Change")
+   - status               (text — "pending", "in_progress", or "completed")
+   - customer_name        (text — optional)
+   - customer_phone       (text — optional)
+   - notes                (text — optional)
+   - estimated_completion (text — optional)
+   - technician_id        (links to technicians table)
+   - created_at           (date/time — when record was created)
+   - updated_at           (date/time — when record was last updated)
+
+
+========================================
+  DEFAULT LOGIN CREDENTIALS
+========================================
+
+  Username:  admin
+  Password:  admin123
+
+
+========================================
+  HOW TO RUN THE APP
+========================================
+
+1. Open a terminal in the project folder.
+2. Run:  python app.py
+3. Open a browser and go to:  http://127.0.0.1:5000
+4. Log in with the default credentials above.
