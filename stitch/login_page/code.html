@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ServiceTrack | Secure Access</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed": "#d8e2ff",
+              "on-background": "#0b1c30",
+              "on-tertiary-fixed-variant": "#005236",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-container-highest": "#d3e4fe",
+              "inverse-surface": "#213145",
+              "on-primary-fixed": "#0f0069",
+              "surface": "#f8f9ff",
+              "error": "#ba1a1a",
+              "surface-dim": "#cbdbf5",
+              "on-error-container": "#93000a",
+              "secondary": "#0058be",
+              "outline": "#777587",
+              "inverse-on-surface": "#eaf1ff",
+              "primary-fixed-dim": "#c3c0ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary-container": "#006e4b",
+              "on-tertiary-container": "#67f4b7",
+              "on-surface": "#0b1c30",
+              "on-secondary-fixed": "#001a42",
+              "surface-variant": "#d3e4fe",
+              "on-surface-variant": "#464555",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#004395",
+              "on-primary-fixed-variant": "#3323cc",
+              "surface-tint": "#4d44e3",
+              "outline-variant": "#c7c4d8",
+              "primary-container": "#4f46e5",
+              "primary-fixed": "#e2dfff",
+              "on-primary": "#ffffff",
+              "tertiary": "#005338",
+              "primary": "#3525cd",
+              "inverse-primary": "#c3c0ff",
+              "surface-container": "#e5eeff",
+              "on-primary-container": "#dad7ff",
+              "surface-container-low": "#eff4ff",
+              "on-secondary": "#ffffff",
+              "background": "#f8f9ff",
+              "on-secondary-container": "#fefcff",
+              "on-error": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "surface-bright": "#f8f9ff",
+              "tertiary-fixed": "#6ffbbe",
+              "secondary-container": "#2170e4",
+              "on-tertiary": "#ffffff",
+              "surface-container-high": "#dce9ff",
+              "secondary-fixed-dim": "#adc6ff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .indigo-pulse {
+            background: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%);
+        }
+        .tonal-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased min-h-screen flex items-center justify-center p-6 overflow-hidden">
+<!-- Subtle Background Elements -->
+<div class="fixed inset-0 z-0 pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary/5 blur-[120px]"></div>
+</div>
+<!-- Main Auth Card -->
+<main class="relative z-10 w-full max-w-[440px]">
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden border border-outline-variant/10">
+<!-- Brand Header -->
+<div class="pt-10 pb-8 px-8 flex flex-col items-center">
+<div class="w-12 h-12 indigo-pulse rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-white text-2xl" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<h1 class="font-headline font-extrabold text-3xl tracking-tighter text-on-surface">ServiceTrack</h1>
+<p class="text-on-surface-variant font-label text-sm uppercase tracking-[0.05em] mt-1 opacity-70">Precision Engineering</p>
+</div>
+<!-- Tabs Navigation -->
+<div class="flex px-8 border-b border-outline-variant/20">
+<button class="flex-1 py-4 text-sm font-semibold border-b-2 border-primary text-primary transition-colors">
+                    Technician Login
+                </button>
+<button class="flex-1 py-4 text-sm font-semibold border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors">
+                    Customer Lookup
+                </button>
+</div>
+<!-- Content Area (Technician View Active) -->
+<div class="p-8">
+<form class="space-y-5">
+<!-- Input Group -->
+<div class="space-y-1.5">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant/80 ml-1">Username</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors text-[20px]">person</span>
+<input class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline/50 outline-none text-sm font-medium" placeholder="tech_id_042" type="text"/>
+</div>
+</div>
+<!-- Input Group -->
+<div class="space-y-1.5">
+<div class="flex justify-between items-center ml-1">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant/80">Password</label>
+<a class="text-[11px] font-bold text-primary hover:underline uppercase tracking-tighter" href="#">Forgot?</a>
+</div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors text-[20px]">lock</span>
+<input class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline/50 outline-none text-sm font-medium" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Submit -->
+<button class="w-full indigo-pulse text-white py-4 rounded-xl font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group mt-2" type="submit">
+<span>Sign In</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</form>
+<!-- Status Check (Hidden by default in static HTML logic) -->
+<div class="hidden">
+<form class="space-y-5">
+<div class="space-y-1.5">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant/80 ml-1">License Plate Number</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors text-[20px]">directions_car</span>
+<input class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline/50 outline-none text-sm font-medium uppercase" placeholder="ABC-1234" type="text"/>
+</div>
+</div>
+<button class="w-full bg-on-background text-white py-4 rounded-xl font-headline font-bold text-sm tracking-wide shadow-xl shadow-on-background/10 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group" type="submit">
+<span>Check Status</span>
+<span class="material-symbols-outlined text-[18px]">search</span>
+</button>
+</form>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10 text-center">
+<p class="text-[13px] text-on-surface-variant font-medium">
+                        Need system access? <a class="text-primary font-bold hover:underline" href="#">Contact Administrator</a>
+</p>
+</div>
+</div>
+</div>
+<!-- System Status Footer -->
+<div class="mt-6 flex justify-between items-center px-2">
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-tertiary-fixed-dim"></span>
+<span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">System Operational</span>
+</div>
+<div class="flex items-center gap-4">
+<a class="text-[11px] font-bold text-on-surface-variant/60 hover:text-primary uppercase tracking-widest transition-colors" href="#">Privacy</a>
+<a class="text-[11px] font-bold text-on-surface-variant/60 hover:text-primary uppercase tracking-widest transition-colors" href="#">Support</a>
+</div>
+</div>
+</main>
+<!-- Decorative Image Card (Asymmetric Layout) -->
+<div class="fixed right-12 bottom-12 hidden xl:block w-72">
+<div class="bg-surface-container-low p-4 rounded-xl rotate-3 shadow-2xl">
+<div class="aspect-video w-full rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover grayscale contrast-125 opacity-80" data-alt="Close-up of a high-performance car engine with blue ambient lighting reflecting off polished chrome and carbon fiber parts" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAku8mlUlOiEVB0aN_gUq7_nTdpbF2lBkDVrPaH69_PyFTUEwkcMi-ozpa3OY19RBwuzwD3EbAzQNmsLdc1BjFM7r9MRt2khAohIG9lhGqP_Qjp2kN9rGQRnoR6Q4tuclLKVfPL3IDGXBnft7mLBwiPaJcGLv8V8KPTqB0ZYalgERkaFAXgwtIaRMLrD8MkOddGezcplC4bjfD3L8N8vDmkiF0K-MBajjnIvENAXYPdcNPBXBSr6FutLRDc7MLMy_Kc1vlNEekHlA"/>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Certified Service</p>
+<p class="text-[12px] font-headline font-bold text-on-surface leading-tight">ISO 9001 Compliance</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

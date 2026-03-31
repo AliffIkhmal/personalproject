@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ServiceTrack | Precision Engineering Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed": "#d8e2ff",
+              "on-background": "#0b1c30",
+              "on-tertiary-fixed-variant": "#005236",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-container-highest": "#d3e4fe",
+              "inverse-surface": "#213145",
+              "on-primary-fixed": "#0f0069",
+              "surface": "#f8f9ff",
+              "error": "#ba1a1a",
+              "surface-dim": "#cbdbf5",
+              "on-error-container": "#93000a",
+              "secondary": "#0058be",
+              "outline": "#777587",
+              "inverse-on-surface": "#eaf1ff",
+              "primary-fixed-dim": "#c3c0ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary-container": "#006e4b",
+              "on-tertiary-container": "#67f4b7",
+              "on-surface": "#0b1c30",
+              "on-secondary-fixed": "#001a42",
+              "surface-variant": "#d3e4fe",
+              "on-surface-variant": "#464555",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#004395",
+              "on-primary-fixed-variant": "#3323cc",
+              "surface-tint": "#4d44e3",
+              "outline-variant": "#c7c4d8",
+              "primary-container": "#4f46e5",
+              "primary-fixed": "#e2dfff",
+              "on-primary": "#ffffff",
+              "tertiary": "#005338",
+              "primary": "#3525cd",
+              "inverse-primary": "#c3c0ff",
+              "surface-container": "#e5eeff",
+              "on-primary-container": "#dad7ff",
+              "surface-container-low": "#eff4ff",
+              "on-secondary": "#ffffff",
+              "background": "#f8f9ff",
+              "on-secondary-container": "#fefcff",
+              "on-error": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "surface-bright": "#f8f9ff",
+              "tertiary-fixed": "#6ffbbe",
+              "secondary-container": "#2170e4",
+              "on-tertiary": "#ffffff",
+              "surface-container-high": "#dce9ff",
+              "secondary-fixed-dim": "#adc6ff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift-no-border {
+            background-color: #f8f9ff;
+        }
+        .indigo-pulse {
+            background: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c7c4d8;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SIDEBAR NAVIGATION (Authority: JSON SideNavBar) -->
+<aside class="fixed left-0 top-0 h-full w-64 border-r-0 bg-slate-900 dark:bg-slate-950 shadow-2xl shadow-indigo-950/20 flex flex-col justify-between py-6 z-50 font-['Plus_Jakarta_Sans'] antialiased tracking-tight">
+<div>
+<!-- Brand Header -->
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 indigo-pulse rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ServiceTrack</h1>
+<p class="text-[10px] text-slate-400 tracking-[0.2em] uppercase font-bold">Precision Engineering</p>
+</div>
+</div>
+</div>
+<!-- Main Nav Tabs -->
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-white bg-indigo-600/10 border-r-4 border-indigo-500 transition-all duration-300" href="#">
+<span class="material-symbols-outlined text-indigo-400">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-sm font-semibold">Search</span>
+</a>
+</nav>
+</div>
+<!-- Footer Nav Tabs -->
+<div class="space-y-1 pt-6 border-t border-slate-800/50">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">person_add</span>
+<span class="text-sm font-semibold">Register Technician</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">lock_reset</span>
+<span class="text-sm font-semibold">Change Password</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-error/80 hover:text-error hover:bg-red-500/5 transition-all duration-200 ease-in-out active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-sm font-semibold">Logout</span>
+</a>
+</div>
+</aside>
+<!-- MAIN CONTENT CANVAS -->
+<main class="ml-64 min-h-screen">
+<!-- TOP APP BAR (Authority: JSON TopAppBar) -->
+<header class="sticky top-0 z-40 w-full bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center h-16 px-8 transition-all">
+<div class="flex items-center gap-8">
+<nav class="flex gap-6 font-['Plus_Jakarta_Sans'] font-semibold text-sm">
+<a class="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 pb-5 translate-y-[2px]" href="#">Overview</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors pb-5" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+<span class="material-symbols-outlined text-sm">search</span>
+</span>
+<input class="bg-slate-100 dark:bg-slate-800 border-none rounded-full py-1.5 pl-10 pr-4 text-xs w-48 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none" placeholder="Quick Search VIN..." type="text"/>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold text-on-surface">Alex Rivera</p>
+<p class="text-[10px] text-slate-500">Lead Technician</p>
+</div>
+<img alt="Technician Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/10" data-alt="portrait of a professional male technician in a clean workshop environment, soft cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCB-rjebV6S7gbVseLqTriAiBD4stisYi1vhrNLit8puqIR7-4DUL06n-JldHQkgt6ylDKu0k-ioRqjNIsjk_TC3r8g7oYNmvvJstJE-1nbBIJ6g8fRO-SoiADyHBhx0IQ685DaF0vTxVtXYaDq7sokRCeU7FXZ5JgtgW7fr5lSEEQJr_1vTQAhvqPdJDh1iRuCKvuqasrOGpk_ZxXr3pat8x9hFcIrUYHYsK4gHoGDQCYmLvuWuU65KdU6KN-3R9zZGMV_wtnW4A"/>
+</div>
+</div>
+</header>
+<!-- DASHBOARD CONTAINER -->
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- STAT CARDS (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Total Records -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-indigo-500 hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<span class="text-[10px] font-bold text-indigo-500 tracking-wider uppercase bg-indigo-50 px-2 py-0.5 rounded">Active Fleet</span>
+</div>
+<h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Records</h3>
+<p class="text-3xl font-headline font-extrabold text-on-surface">1,284</p>
+</div>
+<!-- In Progress -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-amber-500 hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-amber-50 rounded-lg text-amber-600 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">build</span>
+</div>
+<span class="text-[10px] font-bold text-amber-500 tracking-wider uppercase bg-amber-50 px-2 py-0.5 rounded">Priority</span>
+</div>
+<h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">In Progress</h3>
+<p class="text-3xl font-headline font-extrabold text-on-surface">42</p>
+</div>
+<!-- Queued -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-secondary-container hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-blue-50 rounded-lg text-secondary-container group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+</div>
+<span class="text-[10px] font-bold text-secondary-container tracking-wider uppercase bg-blue-50 px-2 py-0.5 rounded">Waitlist</span>
+</div>
+<h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Queued</h3>
+<p class="text-3xl font-headline font-extrabold text-on-surface">18</p>
+</div>
+<!-- Completed -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-tertiary-fixed-dim hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<span class="text-[10px] font-bold text-emerald-500 tracking-wider uppercase bg-emerald-50 px-2 py-0.5 rounded">Dispatched</span>
+</div>
+<h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Completed</h3>
+<p class="text-3xl font-headline font-extrabold text-on-surface">956</p>
+</div>
+</div>
+<!-- TOOLBAR ROW -->
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-surface-container-low p-4 rounded-xl">
+<div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+<button class="px-4 py-2 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 whitespace-nowrap">All Records</button>
+<button class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all whitespace-nowrap">In Progress</button>
+<button class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all whitespace-nowrap">Queued</button>
+<button class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all whitespace-nowrap">Completed</button>
+</div>
+<button class="flex items-center gap-2 indigo-pulse text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                    Add New Record
+                </button>
+</div>
+<!-- SERVICE RECORDS TABLE -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-slate-100">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 text-[10px] uppercase tracking-[0.15em] font-extrabold text-slate-500">
+<th class="px-6 py-4">Vehicle Name</th>
+<th class="px-6 py-4">Plate Number</th>
+<th class="px-6 py-4">Service Type</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Est. Completion</th>
+<th class="px-6 py-4 text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+<span class="material-symbols-outlined text-lg">directions_car</span>
+</div>
+<span class="text-sm font-bold text-on-surface">Porsche 911 Carrera</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">PC-911-2024</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">Major Service</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+<span class="text-xs font-bold text-amber-700">In Progress</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold text-slate-600">Today, 4:30 PM</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex justify-center gap-2">
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><span class="material-symbols-outlined text-lg">edit_note</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Status"><span class="material-symbols-outlined text-lg">history</span></button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-all" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-slate-50/20 hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+<span class="material-symbols-outlined text-lg">local_shipping</span>
+</div>
+<span class="text-sm font-bold text-on-surface">Mercedes Sprinter Van</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">MB-SPR-402</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">Minor Service</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-slate-400"></span>
+<span class="text-xs font-bold text-slate-500">Queued</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold text-slate-400 italic">TBD</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex justify-center gap-2">
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><span class="material-symbols-outlined text-lg">edit_note</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Status"><span class="material-symbols-outlined text-lg">history</span></button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-all" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+<span class="material-symbols-outlined text-lg">electric_car</span>
+</div>
+<span class="text-sm font-bold text-on-surface">Tesla Model S Plaid</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">EL-TSL-001</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">Minor Service</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs font-bold text-emerald-700">Completed</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold text-slate-600">Yesterday</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex justify-center gap-2">
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit"><span class="material-symbols-outlined text-lg">edit_note</span></button>
+<button class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Status"><span class="material-symbols-outlined text-lg">history</span></button>
+<button class="p-1.5 text-slate-400 hover:text-error hover:bg-error/5 rounded-lg transition-all" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 flex items-center justify-between bg-slate-50/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase">Showing 3 of 1,284 vehicles</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm shadow-indigo-200">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:border-indigo-300 transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- ADD RECORD MODAL (OVERLAY) - Initially Hidden state achieved by positioning off-screen or logic, here showing for context -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+<div class="bg-surface-container-lowest w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+<div class="indigo-pulse p-6 text-white flex justify-between items-center">
+<div>
+<h2 class="text-xl font-headline font-bold">New Service Record</h2>
+<p class="text-xs text-white/70">Enter vehicle and technician details to queue.</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<form class="p-8 space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Vehicle Model</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none text-on-surface font-semibold" placeholder="e.g. BMW M3" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Plate Number</label>
+<input class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none text-on-surface font-semibold" placeholder="e.g. ABC-1234" type="text"/>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Service Type</label>
+<div class="flex gap-4">
+<label class="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-slate-100 bg-slate-50 cursor-pointer hover:border-indigo-100 hover:bg-white transition-all group">
+<input class="hidden" name="stype" type="radio"/>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-indigo-500">settings</span>
+<span class="text-xs font-bold text-slate-500 group-hover:text-indigo-700">Minor Service</span>
+</label>
+<label class="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-indigo-500 bg-indigo-50/30 cursor-pointer transition-all group">
+<input checked="" class="hidden" name="stype" type="radio"/>
+<span class="material-symbols-outlined text-indigo-500" style="font-variation-settings: 'FILL' 1;">build</span>
+<span class="text-xs font-bold text-indigo-700">Major Service</span>
+</label>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Technician Notes</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none text-on-surface" placeholder="Specify engine diagnostics or specific repair needs..." rows="3"></textarea>
+</div>
+<div class="flex gap-3 pt-2">
+<button class="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all" type="button">Cancel</button>
+<button class="flex-[2] py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all" type="submit">
+                        Register Record
+                    </button>
+</div>
+</form>
+</div>
+</div>
+</body></html>

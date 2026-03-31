@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+instance/
+.secret_key
+*.db
+node_modules/
+frontend/dist/

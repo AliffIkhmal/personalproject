@@ -1,30 +1,73 @@
 # ==========================================
 # Vehicle Service Tracking System - app.py
-# This is the main file that runs the app.
-# We use Flask for the web server and
-# sqlite3 for the database (built into Python).
+# Flask JSON API backend for React frontend.
 # ==========================================
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sqlite3
 import os
+import secrets
 from datetime import datetime, timezone, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 # GMT+8 timezone
 GMT8 = timezone(timedelta(hours=8))
+
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+VALID_STATUSES = {'pending', 'in_progress', 'completed'}
+SECRET_KEY_FILE = '.secret_key'
+
+
+def load_or_create_secret_key():
+    """Load secret key from file, or generate a new one."""
+    if os.path.exists(SECRET_KEY_FILE):
+        with open(SECRET_KEY_FILE, 'r') as f:
+            key = f.read().strip()
+            if key:
+                return key
+    key = secrets.token_hex(32)
+    with open(SECRET_KEY_FILE, 'w') as f:
+        f.write(key)
+    return key
+
+
+def safe_get_json():
+    """Safely parse JSON body, return empty dict if invalid/missing."""
+    data = request.get_json(silent=True)
+    if data is None:
+        return {}
+    return data
 
 
 def now_gmt8():
     """Return current datetime string in GMT+8."""
     return datetime.now(GMT8).strftime('%Y-%m-%d %H:%M:%S')
 
-# Create the Flask app
 
-app = Flask(__name__)
-app.secret_key = 'vehicle-tracking-secret-key-2026'
+def row_to_dict(row):
+    """Convert a sqlite3.Row to a dict."""
+    if row is None:
+        return None
+    return dict(row)
+
+
+def require_auth():
+    """Return user_id from session, or None if not logged in."""
+    if 'user_id' not in session:
+        return None
+    return session['user_id']
+
+
+# Create the Flask app — serve React build in production
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
+app.secret_key = load_or_create_secret_key()
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # --- Flask-Limiter for basic DDoS protection ---
 limiter = Limiter(
@@ -103,86 +146,70 @@ def add_default_technician():
 
 
 # ------------------------------------------
-# ROUTES (Pages of the website)
+# ROUTES — JSON API
 # ------------------------------------------
 
-# --- LOGIN PAGE ---
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/api/auth/check', methods=['GET'])
+def auth_check():
+    if 'user_id' in session:
+        return jsonify({'authenticated': True, 'user': {'id': session['user_id'], 'username': session['username']}})
+    return jsonify({'authenticated': False})
+
+
+@app.route('/api/login', methods=['POST'])
 @limiter.limit("10 per minute")
-def login():
-    # If the form was submitted (POST request)
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+def api_login():
+    data = safe_get_json()
+    username = data.get('username', '')
+    password = data.get('password', '')
 
-        # Look up the technician in the database
-        db = get_db()
-        technician = db.execute('SELECT * FROM technicians WHERE username = ?',
-                                (username,)).fetchone()
-        db.close()
+    db = get_db()
+    technician = db.execute('SELECT * FROM technicians WHERE username = ?',
+                            (username,)).fetchone()
+    db.close()
 
-        # Check if technician exists and password is correct
-        if technician and check_password_hash(technician['password'], password):
-            # Save user info in session (like "logging them in")
-            session['user_id'] = technician['id']
-            session['username'] = technician['username']
-            flash('Welcome back, ' + technician['username'] + '!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid username or password.', 'error')
-            return redirect(url_for('login'))
+    if technician and check_password_hash(technician['password'], password):
+        session['user_id'] = technician['id']
+        session['username'] = technician['username']
+        return jsonify({'success': True, 'user': {'id': technician['id'], 'username': technician['username']}})
 
-    # If just visiting the page (GET request), show the login form
-    return render_template('login.html')
+    return jsonify({'success': False, 'error': 'Invalid username or password.'}), 401
 
 
-# --- CUSTOMER LOOKUP (from login page) ---
-@app.route('/customer-lookup', methods=['POST'])
-def customer_lookup():
-    license_plate = request.form['license_plate'].strip().upper()
+@app.route('/api/customer-lookup', methods=['POST'])
+def api_customer_lookup():
+    data = safe_get_json()
+    license_plate = data.get('license_plate', '').strip().upper()
 
     if not license_plate:
-        flash('Please enter a license plate number.', 'error')
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Please enter a license plate number.'}), 400
 
-    # Search for the vehicle in the database
     db = get_db()
     record = db.execute('SELECT * FROM service_records WHERE license_plate = ? ORDER BY created_at DESC LIMIT 1',
                         (license_plate,)).fetchone()
     db.close()
 
     if record:
-        return render_template('search.html', record=record)
-    else:
-        flash('No records found for plate "' + license_plate + '".', 'warning')
-        return redirect(url_for('login'))
+        return jsonify({'record': row_to_dict(record)})
+    return jsonify({'error': f'No records found for plate "{license_plate}".'}), 404
 
 
-# --- LOGOUT ---
-@app.route('/logout')
-def logout():
-    session.clear()  # remove all session data
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('login'))
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({'success': True})
 
 
-# --- DASHBOARD PAGE ---
-@app.route('/dashboard')
-def dashboard():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect(url_for('login'))
+@app.route('/api/dashboard', methods=['GET'])
+def api_dashboard():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-    user_id = session['user_id']
     db = get_db()
-
-    # Get all service records for this technician
     records = db.execute('SELECT * FROM service_records WHERE technician_id = ? ORDER BY updated_at DESC',
                          (user_id,)).fetchall()
 
-    # Count records by status for the stats cards
     total_count = db.execute('SELECT COUNT(*) FROM service_records WHERE technician_id = ?',
                              (user_id,)).fetchone()[0]
     active_count = db.execute('SELECT COUNT(*) FROM service_records WHERE technician_id = ? AND status = ?',
@@ -191,99 +218,105 @@ def dashboard():
                                  (user_id, 'completed')).fetchone()[0]
     pending_count = db.execute('SELECT COUNT(*) FROM service_records WHERE technician_id = ? AND status = ?',
                                (user_id, 'pending')).fetchone()[0]
-
     db.close()
 
-    # Put stats in a simple dictionary
-    stats = {
-        'total': total_count,
-        'active': active_count,
-        'pending': pending_count,
-        'completed': completed_count
-    }
+    return jsonify({
+        'records': [row_to_dict(r) for r in records],
+        'stats': {
+            'total': total_count,
+            'active': active_count,
+            'pending': pending_count,
+            'completed': completed_count
+        }
+    })
 
-    return render_template('dashboard.html', records=records, stats=stats)
 
-
-# --- ADD NEW SERVICE RECORD ---
-@app.route('/add-record', methods=['POST'])
+@app.route('/api/records', methods=['POST'])
 @limiter.limit("5 per minute")
-def add_record():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+def api_add_record():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-    # Get form data and strip whitespace
-    vehicle_name = request.form['vehicle_name'].strip()
-    license_plate = request.form['license_plate'].strip().upper()
-    service_type = request.form['service_type'].strip()
-    status = request.form['status']
-    customer_name = request.form.get('customer_name', '').strip()
-    customer_phone = request.form.get('customer_phone', '').strip()
-    estimated_completion = request.form.get('estimated_completion', '').strip()
-    notes = request.form.get('notes', '').strip()
+    # Support both JSON and FormData (for image upload)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        vehicle_name = request.form.get('vehicle_name', '').strip()
+        license_plate = request.form.get('license_plate', '').strip().upper()
+        service_type = request.form.get('service_type', '').strip()
+        status = request.form.get('status', 'pending')
+        customer_name = request.form.get('customer_name', '').strip()
+        customer_phone = request.form.get('customer_phone', '').strip()
+        estimated_completion = request.form.get('estimated_completion', '').strip()
+        notes = request.form.get('notes', '').strip()
+        image_file = request.files.get('image')
+    else:
+        data = safe_get_json()
+        vehicle_name = data.get('vehicle_name', '').strip()
+        license_plate = data.get('license_plate', '').strip().upper()
+        service_type = data.get('service_type', '').strip()
+        status = data.get('status', 'pending')
+        customer_name = data.get('customer_name', '').strip()
+        customer_phone = data.get('customer_phone', '').strip()
+        estimated_completion = data.get('estimated_completion', '').strip()
+        notes = data.get('notes', '').strip()
+        image_file = None
+
+    # Validate status
+    if status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
     # Handle image upload
-    image_file = request.files.get('image')
     image_filename = None
     if image_file and image_file.filename:
-        from werkzeug.utils import secure_filename
-        allowed_ext = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
         ext = image_file.filename.rsplit('.', 1)[-1].lower()
-        if ext in allowed_ext:
+        if ext in ALLOWED_EXTENSIONS:
             filename = secure_filename(f"{license_plate}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}")
-            upload_path = os.path.join('static', 'uploads', filename)
-            image_file.save(upload_path)
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            image_file.save(os.path.join(UPLOAD_FOLDER, filename))
             image_filename = filename
         else:
-            flash('Invalid image file type.', 'error')
-            return redirect(url_for('dashboard'))
+            return jsonify({'error': 'Invalid image file type.'}), 400
 
-    # Validate required fields
     if not vehicle_name or not license_plate or not service_type:
-        flash('Vehicle name, license plate, and service type are required.', 'error')
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Vehicle name, license plate, and service type are required.'}), 400
 
-    # Insert into database
     db = get_db()
     timestamp = now_gmt8()
-    db.execute('''INSERT INTO service_records
+    cursor = db.execute('''INSERT INTO service_records
                  (vehicle_name, license_plate, service_type, status,
                   customer_name, customer_phone, notes, estimated_completion, technician_id,
                   created_at, updated_at, image_filename)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                (vehicle_name, license_plate, service_type, status,
-                customer_name, customer_phone, notes, estimated_completion, session['user_id'],
+                customer_name, customer_phone, notes, estimated_completion, user_id,
                 timestamp, timestamp, image_filename))
     db.commit()
+    record_id = cursor.lastrowid
     db.close()
 
-    flash('Record for ' + vehicle_name + ' (' + license_plate + ') created!', 'success')
-    return redirect(url_for('dashboard'))
+    return jsonify({'success': True, 'record_id': record_id}), 201
 
 
-# --- UPDATE RECORD STATUS ---
-@app.route('/update-status', methods=['POST'])
-def update_status():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/api/records/<int:record_id>/status', methods=['PATCH'])
+def api_update_status(record_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-    record_id = request.form['record_id']
-    new_status = request.form['status']
-    note = request.form.get('note', '').strip()
+    data = safe_get_json()
+    new_status = data.get('status')
+    note = data.get('note', '').strip()
+
+    if not new_status or new_status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
     db = get_db()
-
-    # Verify the record belongs to this technician
     record_check = db.execute('SELECT * FROM service_records WHERE id = ? AND technician_id = ?',
-                              (record_id, session['user_id'])).fetchone()
+                              (record_id, user_id)).fetchone()
     if record_check is None:
-        flash('Record not found or access denied.', 'error')
         db.close()
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Record not found or access denied.'}), 404
 
-    # If there's a note, add it to existing notes
     if note:
         record = db.execute('SELECT notes FROM service_records WHERE id = ?', (record_id,)).fetchone()
         old_notes = record['notes'] if record['notes'] else ''
@@ -296,87 +329,79 @@ def update_status():
 
     db.commit()
     db.close()
-
-    flash('Status updated!', 'success')
-    return redirect(url_for('dashboard'))
+    return jsonify({'success': True})
 
 
-# --- VIEW A SINGLE RECORD ---
-@app.route('/record/<int:record_id>')
-def view_record(record_id):
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/api/records/<int:record_id>', methods=['GET'])
+def api_view_record(record_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
     db = get_db()
-    # Join with technicians table to get the technician's username
     record = db.execute('''SELECT service_records.*, technicians.username as technician_name
                           FROM service_records
                           LEFT JOIN technicians ON service_records.technician_id = technicians.id
-                          WHERE service_records.id = ?''', (record_id,)).fetchone()
+                          WHERE service_records.id = ? AND service_records.technician_id = ?''',
+                        (record_id, user_id)).fetchone()
     db.close()
 
     if record is None:
-        flash('Record not found.', 'error')
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Record not found.'}), 404
 
-    return render_template('search.html', record=record)
+    return jsonify({'record': row_to_dict(record)})
 
 
-# --- SEARCH PAGE ---
-@app.route('/search')
-def search():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/api/search', methods=['GET'])
+def api_search():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
     query = request.args.get('q', '').strip()
-    results = None
+    results = []
 
     if query:
         db = get_db()
-        # Search by license plate or customer name (scoped to this technician)
         search_term = '%' + query + '%'
         results = db.execute('''SELECT * FROM service_records
                                WHERE technician_id = ? AND (license_plate LIKE ? OR customer_name LIKE ?)
                                ORDER BY updated_at DESC''',
-                             (session['user_id'], search_term, search_term)).fetchall()
+                             (user_id, search_term, search_term)).fetchall()
         db.close()
+        results = [row_to_dict(r) for r in results]
 
-    return render_template('search.html', results=results, query=query)
+    return jsonify({'results': results})
 
 
-# --- EDIT A SERVICE RECORD ---
-@app.route('/edit-record', methods=['POST'])
-def edit_record():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/api/records/<int:record_id>', methods=['PUT'])
+def api_edit_record(record_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-    record_id = request.form['record_id']
-    vehicle_name = request.form['vehicle_name'].strip()
-    license_plate = request.form['license_plate'].strip().upper()
-    service_type = request.form['service_type'].strip()
-    status = request.form['status']
-    customer_name = request.form.get('customer_name', '').strip()
-    customer_phone = request.form.get('customer_phone', '').strip()
-    estimated_completion = request.form.get('estimated_completion', '').strip()
-    notes = request.form.get('notes', '').strip()
+    data = safe_get_json()
+    vehicle_name = data.get('vehicle_name', '').strip()
+    license_plate = data.get('license_plate', '').strip().upper()
+    service_type = data.get('service_type', '').strip()
+    status = data.get('status', '')
+    customer_name = data.get('customer_name', '').strip()
+    customer_phone = data.get('customer_phone', '').strip()
+    estimated_completion = data.get('estimated_completion', '').strip()
+    notes = data.get('notes', '').strip()
 
-    # Validate required fields
     if not vehicle_name or not license_plate or not service_type:
-        flash('Vehicle name, license plate, and service type are required.', 'error')
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Vehicle name, license plate, and service type are required.'}), 400
+
+    if status and status not in VALID_STATUSES:
+        return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
     db = get_db()
-
-    # Verify the record belongs to this technician
     record = db.execute('SELECT * FROM service_records WHERE id = ? AND technician_id = ?',
-                        (record_id, session['user_id'])).fetchone()
+                        (record_id, user_id)).fetchone()
     if record is None:
-        flash('Record not found or access denied.', 'error')
         db.close()
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Record not found or access denied.'}), 404
 
     db.execute('''UPDATE service_records
                  SET vehicle_name = ?, license_plate = ?, service_type = ?, status = ?,
@@ -385,157 +410,142 @@ def edit_record():
                  WHERE id = ? AND technician_id = ?''',
                (vehicle_name, license_plate, service_type, status,
                 customer_name, customer_phone, estimated_completion, notes,
-                now_gmt8(), record_id, session['user_id']))
+                now_gmt8(), record_id, user_id))
     db.commit()
     db.close()
-
-    flash('Record for ' + vehicle_name + ' updated successfully!', 'success')
-    return redirect(url_for('dashboard'))
+    return jsonify({'success': True})
 
 
-# --- DELETE A SERVICE RECORD ---
-@app.route('/delete-record', methods=['POST'])
-def delete_record():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    record_id = request.form['record_id']
+@app.route('/api/records/<int:record_id>', methods=['DELETE'])
+def api_delete_record(record_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
     db = get_db()
-
-    # Verify the record belongs to this technician
     record = db.execute('SELECT * FROM service_records WHERE id = ? AND technician_id = ?',
-                        (record_id, session['user_id'])).fetchone()
+                        (record_id, user_id)).fetchone()
     if record is None:
-        flash('Record not found or access denied.', 'error')
         db.close()
-        return redirect(url_for('dashboard'))
+        return jsonify({'error': 'Record not found or access denied.'}), 404
 
     db.execute('DELETE FROM service_records WHERE id = ? AND technician_id = ?',
-               (record_id, session['user_id']))
+               (record_id, user_id))
     db.commit()
     db.close()
-
-    flash('Record deleted successfully.', 'success')
-    return redirect(url_for('dashboard'))
+    return jsonify({'success': True})
 
 
-# --- REGISTER NEW TECHNICIAN (only logged-in technicians can register new ones) ---
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if 'user_id' not in session:
-        flash('Please log in first. Only technicians can register new accounts.', 'warning')
-        return redirect(url_for('login'))
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
+    data = safe_get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    confirm_password = data.get('confirm_password', '')
 
-        # Validation
-        if not username or not password:
-            flash('Username and password are required.', 'error')
-            return redirect(url_for('register'))
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required.'}), 400
+    if len(username) < 3:
+        return jsonify({'error': 'Username must be at least 3 characters.'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+    if password != confirm_password:
+        return jsonify({'error': 'Passwords do not match.'}), 400
 
-        if len(username) < 3:
-            flash('Username must be at least 3 characters.', 'error')
-            return redirect(url_for('register'))
-
-        if len(password) < 6:
-            flash('Password must be at least 6 characters.', 'error')
-            return redirect(url_for('register'))
-
-        if password != confirm_password:
-            flash('Passwords do not match.', 'error')
-            return redirect(url_for('register'))
-
-        db = get_db()
-
-        # Check if username already exists
-        existing = db.execute('SELECT * FROM technicians WHERE username = ?', (username,)).fetchone()
-        if existing:
-            flash('Username "' + username + '" is already taken.', 'error')
-            db.close()
-            return redirect(url_for('register'))
-
-        # Create the new technician account
-        hashed_password = generate_password_hash(password)
-        db.execute('INSERT INTO technicians (username, password) VALUES (?, ?)',
-                   (username, hashed_password))
-        db.commit()
+    db = get_db()
+    existing = db.execute('SELECT * FROM technicians WHERE username = ?', (username,)).fetchone()
+    if existing:
         db.close()
+        return jsonify({'error': f'Username "{username}" is already taken.'}), 409
 
-        flash('New technician account created successfully!', 'success')
-        return redirect(url_for('dashboard'))
+    hashed_password = generate_password_hash(password)
+    db.execute('INSERT INTO technicians (username, password) VALUES (?, ?)',
+               (username, hashed_password))
+    db.commit()
+    db.close()
+    return jsonify({'success': True}), 201
 
-    return render_template('register.html')
 
+@app.route('/api/change-password', methods=['POST'])
+def api_change_password():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
 
-# --- CHANGE PASSWORD ---
-@app.route('/change-password', methods=['GET', 'POST'])
-def change_password():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect(url_for('login'))
+    data = safe_get_json()
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
 
-    if request.method == 'POST':
-        current_password = request.form['current_password']
-        new_password = request.form['new_password']
-        confirm_password = request.form['confirm_password']
+    if not current_password or not new_password:
+        return jsonify({'error': 'All fields are required.'}), 400
+    if len(new_password) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters.'}), 400
+    if new_password != confirm_password:
+        return jsonify({'error': 'New passwords do not match.'}), 400
 
-        # Validation
-        if not current_password or not new_password:
-            flash('All fields are required.', 'error')
-            return redirect(url_for('change_password'))
+    db = get_db()
+    technician = db.execute('SELECT * FROM technicians WHERE id = ?',
+                            (user_id,)).fetchone()
 
-        if len(new_password) < 6:
-            flash('New password must be at least 6 characters.', 'error')
-            return redirect(url_for('change_password'))
-
-        if new_password != confirm_password:
-            flash('New passwords do not match.', 'error')
-            return redirect(url_for('change_password'))
-
-        db = get_db()
-        technician = db.execute('SELECT * FROM technicians WHERE id = ?',
-                                (session['user_id'],)).fetchone()
-
-        if not technician or not check_password_hash(technician['password'], current_password):
-            flash('Current password is incorrect.', 'error')
-            db.close()
-            return redirect(url_for('change_password'))
-
-        # Update the password
-        hashed = generate_password_hash(new_password)
-        db.execute('UPDATE technicians SET password = ? WHERE id = ?',
-                   (hashed, session['user_id']))
-        db.commit()
+    if not technician or not check_password_hash(technician['password'], current_password):
         db.close()
+        return jsonify({'error': 'Current password is incorrect.'}), 403
 
-        flash('Password changed successfully!', 'success')
-        return redirect(url_for('dashboard'))
+    hashed = generate_password_hash(new_password)
+    db.execute('UPDATE technicians SET password = ? WHERE id = ?',
+               (hashed, user_id))
+    db.commit()
+    db.close()
+    return jsonify({'success': True})
 
-    return render_template('change_password.html')
+
+# ------------------------------------------
+# SERVE UPLOADED IMAGES
+# ------------------------------------------
+@app.route('/static/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+
+# ------------------------------------------
+# SERVE REACT SPA (catch-all for client-side routing)
+# ------------------------------------------
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found.'}), 404
+
+    build_dir = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+    file_path = os.path.join(build_dir, path)
+    if path and os.path.isfile(file_path):
+        return send_from_directory(build_dir, path)
+
+    index_path = os.path.join(build_dir, 'index.html')
+    if os.path.isfile(index_path):
+        return send_from_directory(build_dir, 'index.html')
+
+    return jsonify({'message': 'React frontend not built yet. Run npm run build in frontend/ or use the Vite dev server.'}), 200
 
 
 # ------------------------------------------
 # ERROR HANDLERS
 # ------------------------------------------
-
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('error.html', error_code=404,
-                           error_title='Page Not Found',
-                           error_message='The page you are looking for does not exist or has been moved.'), 404
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found.'}), 404
+    return serve_react(request.path.lstrip('/'))
 
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    return render_template('error.html', error_code=500,
-                           error_title='Server Error',
-                           error_message='Something went wrong on our end. Please try again later.'), 500
+    return jsonify({'error': 'Internal server error.'}), 500
 
 
 # ------------------------------------------
@@ -547,4 +557,4 @@ add_default_technician()
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ServiceTrack - Record Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-fixed": "#d8e2ff",
+              "on-background": "#0b1c30",
+              "on-tertiary-fixed-variant": "#005236",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-container-highest": "#d3e4fe",
+              "inverse-surface": "#213145",
+              "on-primary-fixed": "#0f0069",
+              "surface": "#f8f9ff",
+              "error": "#ba1a1a",
+              "surface-dim": "#cbdbf5",
+              "on-error-container": "#93000a",
+              "secondary": "#0058be",
+              "outline": "#777587",
+              "inverse-on-surface": "#eaf1ff",
+              "primary-fixed-dim": "#c3c0ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary-container": "#006e4b",
+              "on-tertiary-container": "#67f4b7",
+              "on-surface": "#0b1c30",
+              "on-secondary-fixed": "#001a42",
+              "surface-variant": "#d3e4fe",
+              "on-surface-variant": "#464555",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#004395",
+              "on-primary-fixed-variant": "#3323cc",
+              "surface-tint": "#4d44e3",
+              "outline-variant": "#c7c4d8",
+              "primary-container": "#4f46e5",
+              "primary-fixed": "#e2dfff",
+              "on-primary": "#ffffff",
+              "tertiary": "#005338",
+              "primary": "#3525cd",
+              "inverse-primary": "#c3c0ff",
+              "surface-container": "#e5eeff",
+              "on-primary-container": "#dad7ff",
+              "surface-container-low": "#eff4ff",
+              "on-secondary": "#ffffff",
+              "background": "#f8f9ff",
+              "on-secondary-container": "#fefcff",
+              "on-error": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "surface-bright": "#f8f9ff",
+              "tertiary-fixed": "#6ffbbe",
+              "secondary-container": "#2170e4",
+              "on-tertiary": "#ffffff",
+              "surface-container-high": "#dce9ff",
+              "secondary-fixed-dim": "#adc6ff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .indigo-pulse {
+            background: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%);
+        }
+        .tonal-shift-no-border {
+            background-color: rgba(229, 238, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full w-64 border-r-0 bg-slate-900 dark:bg-slate-950 font-['Plus_Jakarta_Sans'] antialiased tracking-tight shadow-2xl shadow-indigo-950/20 flex flex-col justify-between py-6 z-50">
+<div>
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg indigo-pulse flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ServiceTrack</h1>
+<p class="text-[10px] text-slate-500 font-semibold tracking-widest uppercase">Precision Engineering</p>
+</div>
+</div>
+</div>
+<nav class="space-y-1 px-3">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50 rounded-xl group" href="#">
+<span class="material-symbols-outlined text-xl transition-transform group-active:scale-[0.98]" data-icon="dashboard">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-white bg-indigo-600/10 border-r-4 border-indigo-500 transition-all duration-300 rounded-l-xl" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="search" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-medium text-sm">Search</span>
+</a>
+</nav>
+</div>
+<div class="px-3 space-y-1">
+<div class="px-4 py-2">
+<p class="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-2">Technician Portal</p>
+</div>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50 rounded-xl group" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="person_add">person_add</span>
+<span class="font-medium text-sm">Register Technician</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50 rounded-xl group" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="lock_reset">lock_reset</span>
+<span class="font-medium text-sm">Change Password</span>
+</a>
+<div class="mt-4 pt-4 border-t border-slate-800">
+<a class="flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 transition-colors hover:bg-red-900/10 rounded-xl group" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="logout">logout</span>
+<span class="font-medium text-sm">Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- TopAppBar (Shared Component) -->
+<header class="sticky top-0 z-40 w-full bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center h-16 px-8 ml-64">
+<div class="flex items-center gap-6">
+<nav class="flex items-center gap-8 font-['Plus_Jakarta_Sans'] font-semibold text-sm h-16">
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors py-5" href="#">Overview</a>
+<a class="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 py-5" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="bg-surface-container-low border-none rounded-full py-1.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 w-64 placeholder:text-slate-400" placeholder="Quick Search..." type="text"/>
+</div>
+<button class="p-2 text-slate-500 hover:text-indigo-500 transition-colors focus:ring-2 focus:ring-indigo-500/20 rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/20">
+<img alt="Technician Profile" class="w-full h-full object-cover" data-alt="Close-up professional portrait of a senior automotive technician in a clean workshop environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5MI06wrG0DKYnCZUGZTQ8whws6rXjCGIkDz8Vq4c4rAEKzxTVtF8Ai2RXG8fX7DJ_c93V5B-C2nnqXc2IwzL5lbQRS7JC1cpfJfrVaaaHF8l4VFjrDj3Rx3yFpVRJ6DYYLZXRXEsOfMmNN8IMe9uKtaT3wmMh67QNIr8aMNHQZnI-iY5RUTkmSLBfzJGVvLP44ekG-ZoY-hoelm41V5vSkjcBC4jLFD46APaI0Zn3NU86xjWEJNbbfQJtPp6V0mJwbVfgij2vVQ"/>
+</div>
+</div>
+</header>
+<main class="ml-64 p-8 max-w-7xl">
+<!-- Back Navigation -->
+<div class="mb-8">
+<button class="flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-medium text-sm group">
+<span class="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-1">arrow_back</span>
+                Back to Dashboard
+            </button>
+</div>
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-10">
+<div>
+<h2 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface mb-2">Service Record #SR-2024-9182</h2>
+<div class="flex items-center gap-3">
+<span class="bg-tertiary-fixed-dim text-on-tertiary-fixed-variant px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">In Progress</span>
+<span class="text-on-surface-variant text-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-base">calendar_today</span>
+                        Scheduled: Oct 24, 2023
+                    </span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-xl border border-outline-variant/30 text-sm font-semibold hover:bg-surface-container-low transition-colors">
+                    Print Report
+                </button>
+<button class="indigo-pulse text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-500/20 active:scale-95 transition-transform">
+                    Complete Service
+                </button>
+</div>
+</div>
+<!-- Content Grid (Asymmetric) -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Column 1: Vehicle & Customer -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Section 1: Vehicle Info -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex justify-between items-start mb-6">
+<h3 class="text-[11px] font-bold text-slate-500 tracking-[0.1em] uppercase">Vehicle Identification</h3>
+<span class="material-symbols-outlined text-slate-300">directions_car</span>
+</div>
+<div class="flex flex-col md:flex-row gap-8 items-center md:items-start">
+<div class="w-full md:w-48 h-32 rounded-lg overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="Sleek modern dark blue sports sedan parked in a clean minimalist garage with studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8aWZeUdgFEVIFQDRLJVafaugpdPjUb2RZjQQa6ixBnZA0wKAeygZXxRJNF4d9vSshrK94Kh85cWQqzi8ahl5i7OvWjlfv6p3arllbxg481UfEK89az1939hGOBA40XYJgjQoHbw_kHjNkQaIdac1Gd3OQ0uuqH36dwP8RnR6TQgqGp6H2qVUFmxjGKiL3-PajkVrrhagpI4VVhUQBqYAn6PAyuNeFrLn00MLoQUxiQFzwIPlvTFS9OEInh6HvZKFn3O3TW1NoYg"/>
+</div>
+<div class="flex-1 grid grid-cols-2 gap-y-6 gap-x-12">
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Make &amp; Model</p>
+<p class="font-headline font-bold text-lg text-on-surface">Porsche Taycan 4S</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">License Plate</p>
+<p class="font-mono font-bold text-lg text-on-surface bg-surface-container px-2 py-0.5 rounded inline-block">B-991-TURBO</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Vehicle Type</p>
+<p class="font-medium text-on-surface">Electric Performance Sedan</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Current Odometer</p>
+<p class="font-mono font-medium text-on-surface">12,450 <span class="text-[10px] text-slate-400">KM</span></p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 3: Technician Notes -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-[11px] font-bold text-slate-500 tracking-[0.1em] uppercase">Service Notes &amp; Technical Log</h3>
+<button class="text-primary text-xs font-bold hover:underline">Clear Notes</button>
+</div>
+<textarea class="w-full h-48 bg-surface-container-low border-none rounded-xl p-6 text-sm text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-slate-400" placeholder="Add detailed service observations, replacement part numbers, or client requests here...">Initial diagnostic scan completed. Brake pad wear detected at 15% remaining on front axle. Recommend immediate replacement. Battery health checked at 98.4% capacity. Fluid levels topped up. System firmware updated to v2.4.1. Suspension mounting bolts torqued to factory specifications.</textarea>
+<div class="mt-4 flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-white bg-indigo-100 flex items-center justify-center text-[8px] font-bold text-primary uppercase">TC</div>
+<div class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400 uppercase">MA</div>
+</div>
+<p class="text-[10px] text-slate-400 italic">Auto-saved 2 minutes ago</p>
+</div>
+</div>
+</div>
+<!-- Column 2: Record Info & Customer Summary -->
+<div class="col-span-12 lg:col-span-4 space-y-8">
+<!-- Section 4: Record Info -->
+<div class="bg-slate-900 text-white rounded-xl p-8 shadow-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+<h3 class="text-[11px] font-bold text-indigo-400 tracking-[0.1em] uppercase mb-8">Metadata</h3>
+<div class="space-y-6">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-400" data-icon="engineering">engineering</span>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 uppercase tracking-wider">Assigned Tech</p>
+<p class="font-semibold text-sm">Marcus V. Sterling</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-400" data-icon="timer">timer</span>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 uppercase tracking-wider">Est. Completion</p>
+<p class="font-semibold text-sm">Tomorrow, 04:30 PM</p>
+</div>
+</div>
+<div class="border-t border-slate-800 my-6"></div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Created</p>
+<p class="text-xs font-medium text-slate-300">Oct 21, 2023</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Last Updated</p>
+<p class="text-xs font-medium text-slate-300">10 min ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 2: Customer Info -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<h3 class="text-[11px] font-bold text-slate-500 tracking-[0.1em] uppercase mb-6">Customer Profile</h3>
+<div class="flex items-center gap-4 mb-6">
+<div class="w-14 h-14 rounded-full bg-surface-container-high flex items-center justify-center text-primary font-headline font-bold text-xl">
+                            EK
+                        </div>
+<div>
+<p class="font-headline font-bold text-on-surface">Elena Kovic</p>
+<p class="text-xs text-on-surface-variant">Platinum Member</p>
+</div>
+</div>
+<div class="space-y-4">
+<button class="w-full flex items-center justify-between p-3 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="phone">phone</span>
+<span class="text-sm font-medium">+1 (555) 902-1142</span>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">call</span>
+</button>
+<button class="w-full flex items-center justify-between p-3 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="mail">mail</span>
+<span class="text-sm font-medium">e.kovic@prime.com</span>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">send</span>
+</button>
+</div>
+<div class="mt-8 p-4 rounded-xl border border-dashed border-outline-variant/50">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Previous Services</p>
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface">
+<span class="material-symbols-outlined text-base text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            12 Successful Records
+                        </div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

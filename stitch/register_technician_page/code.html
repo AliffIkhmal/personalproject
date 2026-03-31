@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ServiceTrack - Register Technician</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed": "#d8e2ff",
+                        "on-background": "#0b1c30",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#d3e4fe",
+                        "inverse-surface": "#213145",
+                        "on-primary-fixed": "#0f0069",
+                        "surface": "#f8f9ff",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#cbdbf5",
+                        "on-error-container": "#93000a",
+                        "secondary": "#0058be",
+                        "outline": "#777587",
+                        "inverse-on-surface": "#eaf1ff",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-tertiary-fixed": "#002113",
+                        "tertiary-container": "#006e4b",
+                        "on-tertiary-container": "#67f4b7",
+                        "on-surface": "#0b1c30",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-variant": "#d3e4fe",
+                        "on-surface-variant": "#464555",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-tint": "#4d44e3",
+                        "outline-variant": "#c7c4d8",
+                        "primary-container": "#4f46e5",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#005338",
+                        "primary": "#3525cd",
+                        "inverse-primary": "#c3c0ff",
+                        "surface-container": "#e5eeff",
+                        "on-primary-container": "#dad7ff",
+                        "surface-container-low": "#eff4ff",
+                        "on-secondary": "#ffffff",
+                        "background": "#f8f9ff",
+                        "on-secondary-container": "#fefcff",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-fixed": "#6ffbbe",
+                        "secondary-container": "#2170e4",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "secondary-fixed-dim": "#adc6ff"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .indigo-pulse {
+            background: linear-gradient(135deg, #3525cd 0%, #4f46e5 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-slate-900 dark:bg-slate-950 font-['Plus_Jakarta_Sans'] antialiased tracking-tight shadow-2xl shadow-indigo-950/20 flex flex-col justify-between py-6 z-50">
+<div>
+<!-- Brand Anchor -->
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg indigo-pulse flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ServiceTrack</h1>
+<p class="text-[10px] text-slate-400 uppercase tracking-[0.2em]">Precision Engineering</p>
+</div>
+</div>
+</div>
+<!-- Main Navigation -->
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="text-sm font-semibold">Search</span>
+</a>
+</nav>
+</div>
+<!-- Footer Navigation -->
+<div class="space-y-1">
+<div class="px-6 mb-4">
+<div class="h-px bg-slate-800 w-full"></div>
+</div>
+<!-- Active State: Register Technician -->
+<a class="flex items-center gap-3 px-6 py-3 text-white bg-indigo-600/10 border-r-4 border-indigo-500 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="person_add" style="font-variation-settings: 'FILL' 1;">person_add</span>
+<span class="text-sm font-semibold">Register Technician</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined" data-icon="lock_reset">lock_reset</span>
+<span class="text-sm font-semibold">Change Password</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-100 transition-colors hover:bg-slate-800/50 mt-4" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="text-sm font-semibold">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-40 w-full bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center h-16 px-8 font-['Plus_Jakarta_Sans'] font-semibold text-sm">
+<div class="flex items-center gap-8">
+<nav class="flex gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors" href="#">Overview</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative flex items-center bg-slate-200/50 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+<span class="material-symbols-outlined text-slate-500 text-lg mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-xs w-48 p-0 text-on-surface" placeholder="Quick search..." type="text"/>
+</div>
+<button class="text-slate-500 hover:text-indigo-600 transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-slate-200">
+<img alt="Technician Profile" class="w-full h-full object-cover" data-alt="professional portrait of a senior automotive engineer in a clean modern workshop environment wearing a navy blue uniform" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVBLCY9YhHgZ0igbJinaRKNTJ-HvmXavQ_ZixV2cSuFlTMADOdV-7Ll4WMLzDhkXCBEHOrJ6IwGGieJuZ2lj_tYT3ZTikDLhHRfx-I3F1Vi0_b2UQaSZuY1NnLR9kXQtEZqHl3XUjEOEf3l4DBwcPForjuX6oA1-dyTh-kk6YZ-f5el9SvotEAyd_-ctehOpUrMjsFlvz_3ANejpWX6IhEXQMGcrFY8WlOeUstw9NK1XlS2P0w2Uh5eI9f7TOdouq8O6DometXog"/>
+</div>
+</div>
+</header>
+<!-- Centered Registration Form Canvas -->
+<section class="flex-grow flex items-center justify-center p-8 bg-surface">
+<div class="max-w-md w-full">
+<!-- Branding/Context -->
+<div class="text-center mb-10">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-primary-container text-on-primary-container mb-4 shadow-xl shadow-primary/10">
+<span class="material-symbols-outlined text-3xl" data-icon="person_add">person_add</span>
+</div>
+<h2 class="text-3xl font-headline font-extrabold text-on-background tracking-tight">Register Technician</h2>
+<p class="text-on-surface-variant mt-2 font-medium">Add a new specialist to the ServiceTrack network.</p>
+</div>
+<!-- Registration Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-sm ring-1 ring-outline-variant/10">
+<form class="space-y-6" onsubmit="return false;">
+<!-- Username Field -->
+<div class="space-y-1.5">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">Username</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-xl group-focus-within:text-primary transition-colors" data-icon="person">person</span>
+</div>
+<input class="block w-full pl-10 pr-4 py-3 bg-surface-container-low border-0 rounded-xl focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest text-on-surface transition-all placeholder:text-slate-400" placeholder="j.doe_service" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-1.5">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">Password</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-xl group-focus-within:text-primary transition-colors" data-icon="lock">lock</span>
+</div>
+<input class="block w-full pl-10 pr-4 py-3 bg-surface-container-low border-0 rounded-xl focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest text-on-surface transition-all placeholder:text-slate-400" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Confirm Password Field -->
+<div class="space-y-1.5">
+<label class="block text-xs font-bold uppercase tracking-wider text-on-surface-variant ml-1">Confirm Password</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-xl group-focus-within:text-primary transition-colors" data-icon="shield">shield</span>
+</div>
+<input class="block w-full pl-10 pr-4 py-3 bg-surface-container-low border-0 rounded-xl focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest text-on-surface transition-all placeholder:text-slate-400" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Action Button -->
+<div class="pt-2">
+<button class="w-full py-4 rounded-xl indigo-pulse text-white font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+<span>Create Account</span>
+<span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Extra Info -->
+<div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+<p class="text-xs text-on-surface-variant font-medium">
+                            By creating an account, you agree to the 
+                            <a class="text-primary hover:underline" href="#">ServiceTrack Terms of Use</a> 
+                            and <a class="text-primary hover:underline" href="#">Security Protocols</a>.
+                        </p>
+</div>
+</div>
+<!-- Secondary Support Info -->
+<div class="mt-8 grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-4 rounded-xl flex items-start gap-3">
+<span class="material-symbols-outlined text-indigo-500" data-icon="verified_user">verified_user</span>
+<div>
+<p class="text-[11px] font-bold uppercase text-on-surface tracking-tight">Security</p>
+<p class="text-[10px] text-on-surface-variant">Encrypted credential storage</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-start gap-3">
+<span class="material-symbols-outlined text-indigo-500" data-icon="assignment_ind">assignment_ind</span>
+<div>
+<p class="text-[11px] font-bold uppercase text-on-surface tracking-tight">Permission</p>
+<p class="text-[10px] text-on-surface-variant">Default: Standard Tech Access</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Separation Shift -->
+<div class="fixed bottom-0 left-64 right-0 h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"></div>
+</body></html>
