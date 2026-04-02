@@ -27,8 +27,8 @@ export default function LoginPage() {
       } else {
         addToast(data.error || 'Invalid credentials', 'error');
       }
-    } catch {
-      addToast('Login failed. Please try again.', 'error');
+    } catch (err) {
+      addToast(err?.error || 'Invalid username or password.', 'error');
     } finally {
       setLoading(false);
     }

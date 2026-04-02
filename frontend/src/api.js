@@ -16,8 +16,11 @@ async function request(url, options = {}) {
   const data = await res.json();
 
   if (res.status === 401) {
-    window.location.href = '/login';
-    return data;
+    // Don't redirect if already on the login page (e.g. wrong credentials)
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
+    throw { status: res.status, ...data };
   }
 
   if (!res.ok) {

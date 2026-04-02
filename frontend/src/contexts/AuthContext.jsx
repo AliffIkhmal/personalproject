@@ -27,11 +27,15 @@ export function AuthProvider({ children }) {
   }, [checkAuth]);
 
   const login = async (username, password) => {
-    const data = await api.post('/login', { username, password });
-    if (data.success) {
-      setUser(data.user);
+    try {
+      const data = await api.post('/login', { username, password });
+      if (data.success) {
+        setUser(data.user);
+      }
+      return data;
+    } catch (err) {
+      throw err;
     }
-    return data;
   };
 
   const logout = async () => {

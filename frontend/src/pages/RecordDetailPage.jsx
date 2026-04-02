@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { useToast } from '../contexts/ToastContext';
 import StatusBadge from '../components/ui/StatusBadge';
 
 export default function RecordDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.get(`/records/${id}`);
-        setRecord(data.record);
-      } catch {
-        navigate('/dashboard');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id, navigate]);
+  const fetchRecord = async () => {
+    try {
+      const data = await api.get(`/records/${id}`);
+      setRecord(data.record);
+    } catch {
+      navigate('/dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchRecord(); }, [id]);
 
   if (loading) {
     return (
@@ -92,7 +96,76 @@ export default function RecordDetailPage() {
             </div>
             {record.image_filename && (
               <div className="mt-6">
-                <img src={`/static/uploads/${record.image_filename}`} alt="Vehicle" className="max-w-xs rounded-lg shadow-sm" />
+                <img src={`/static/uploads/${record.image_filename}`} alt="Vehicle" className="max-w-xs rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setLightboxIdx('legacy')} />
+              </div>
+            )}
+          </div>
+
+          {/* Image Gallery */}
+          <div className="bg-white rounded-xl p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[11px] font-bold text-slate-500 tracking-[0.1em] uppercase">Photo Gallery</h3>
+              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                uploading ? 'bg-slate-100 text-slate-400' : 'bg-sky-50 text-sky-600 hover:bg-sky-100'
+              }`}>
+                <span className="material-symbols-outlined text-base">{uploading ? 'hourglass_top' : 'add_photo_alternate'}</span>
+                {uploading ? 'Uploading...' : 'Add Photos'}
+                <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+                  onChange={async (e) => {
+                    const files = [...e.target.files];
+                    if (!files.length) return;
+                    setUploading(true);
+                    try {
+                      const fd = new FormData();
+                      files.forEach((f) => fd.append('images', f));
+                      await api.upload(`/records/${id}/images`, fd);
+                      addToast(`${files.length} image${files.length > 1 ? 's' : ''} uploaded!`, 'success');
+                      fetchRecord();
+                    } catch {
+                      addToast('Failed to upload images.', 'error');
+                    } finally {
+                      setUploading(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {(!record.images || record.images.length === 0) ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <span className="material-symbols-outlined text-4xl mb-2">photo_library</span>
+                <p className="text-sm font-medium">No photos yet</p>
+                <p className="text-xs mt-1">Upload images to document this service</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {record.images.map((img, idx) => (
+                  <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-slate-100">
+                    <img
+                      src={`/static/uploads/${img.filename}`}
+                      alt={img.original_name || 'Service photo'}
+                      className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                      onClick={() => setLightboxIdx(idx)}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await api.delete(`/records/${id}/images/${img.id}`);
+                          addToast('Image deleted.', 'success');
+                          fetchRecord();
+                        } catch {
+                          addToast('Failed to delete image.', 'error');
+                        }
+                      }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -171,6 +244,47 @@ export default function RecordDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxIdx !== null && (() => {
+        const allImages = record.images || [];
+        let src, canNav;
+        if (lightboxIdx === 'legacy') {
+          src = `/static/uploads/${record.image_filename}`;
+          canNav = false;
+        } else {
+          src = `/static/uploads/${allImages[lightboxIdx]?.filename}`;
+          canNav = allImages.length > 1;
+        }
+        return (
+          <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center" onClick={() => setLightboxIdx(null)}>
+            <button onClick={() => setLightboxIdx(null)}
+              className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            {canNav && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => (i - 1 + allImages.length) % allImages.length); }}
+                className="absolute left-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+            )}
+            <img src={src} alt="Preview" className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+            {canNav && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((i) => (i + 1) % allImages.length); }}
+                className="absolute right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
+            )}
+            {canNav && (
+              <p className="absolute bottom-6 text-white/60 text-sm font-medium">{lightboxIdx + 1} / {allImages.length}</p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

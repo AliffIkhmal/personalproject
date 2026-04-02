@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useToast } from '../contexts/ToastContext';
+import { useSocket } from '../contexts/SocketContext';
 import StatCard from '../components/ui/StatCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import Modal from '../components/ui/Modal';
@@ -36,29 +37,44 @@ export default function DashboardPage() {
   const [editForm, setEditForm] = useState({ ...emptyForm, id: null });
   const [updateForm, setUpdateForm] = useState({ id: null, status: '', note: '' });
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Sort
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(10);
+  const [pagination, setPagination] = useState({ total: 0, total_pages: 1 });
+
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const socket = useSocket();
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await api.get('/dashboard');
+      const data = await api.get(`/dashboard?page=${page}&per_page=${perPage}`);
       setRecords(data.records);
       setStats(data.stats);
+      setPagination(data.pagination);
     } catch {
       addToast('Failed to load data.', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, page, perPage]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Real-time: auto-refresh when any client updates records
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => fetchData();
+    socket.on('records_updated', handler);
+    return () => socket.off('records_updated', handler);
+  }, [socket, fetchData]);
 
   // Filtering
   const filteredRecords = filter === 'all' ? records : records.filter((r) => r.status === filter);
@@ -97,12 +113,12 @@ export default function DashboardPage() {
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => formData.append(k, v));
-      if (imageFile) formData.append('image', imageFile);
+      imageFiles.forEach((f) => formData.append('images', f));
       await api.upload('/records', formData);
       addToast('Record created!', 'success');
       setAddOpen(false);
       setForm(emptyForm);
-      setImageFile(null);
+      setImageFiles([]);
       fetchData();
     } catch (err) {
       addToast(err.error || 'Failed to create record.', 'error');
@@ -226,7 +242,7 @@ export default function DashboardPage() {
           ))}
         </div>
         <button
-          onClick={() => { setForm(emptyForm); setImageFile(null); setAddOpen(true); }}
+          onClick={() => { setForm(emptyForm); setImageFiles([]); setAddOpen(true); }}
           className="flex items-center gap-2 indigo-pulse text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           <span className="material-symbols-outlined text-sm">add_circle</span>
@@ -307,7 +323,47 @@ export default function DashboardPage() {
           </table>
         </div>
         <div className="px-6 py-4 flex items-center justify-between bg-slate-50/50">
-          <p className="text-[10px] font-bold text-slate-500 uppercase">Showing {sortedRecords.length} of {records.length} vehicles</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase">
+            Showing {sortedRecords.length} of {pagination.total} vehicles &middot; Page {pagination.page || 1} of {pagination.total_pages || 1}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">chevron_left</span>
+            </button>
+            {Array.from({ length: pagination.total_pages || 1 }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === (pagination.total_pages || 1) || Math.abs(p - page) <= 1)
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === '...' ? (
+                  <span key={`dots-${i}`} className="px-1 text-slate-400 text-xs">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      page === p ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:bg-sky-50 hover:text-sky-600'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              disabled={page >= (pagination.total_pages || 1)}
+              onClick={() => setPage((p) => Math.min(pagination.total_pages || 1, p + 1))}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">chevron_right</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -372,9 +428,12 @@ export default function DashboardPage() {
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" placeholder="Service details..." />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Image (optional)</label>
-            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0] || null)}
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Images (optional, multiple)</label>
+            <input type="file" accept="image/*" multiple onChange={(e) => setImageFiles([...e.target.files])}
               className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+            {imageFiles.length > 0 && (
+              <p className="text-xs text-slate-500 px-1">{imageFiles.length} file{imageFiles.length > 1 ? 's' : ''} selected</p>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>

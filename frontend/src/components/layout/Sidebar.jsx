@@ -4,6 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 const mainNav = [
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { to: '/search', icon: 'search', label: 'Search' },
+  { to: '/customers', icon: 'people', label: 'Customers' },
+  { to: '/audit-log', icon: 'history', label: 'Activity Log' },
 ];
 
 const footerNav = [
