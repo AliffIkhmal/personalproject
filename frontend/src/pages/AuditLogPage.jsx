@@ -16,11 +16,11 @@ const ACTION_OPTIONS = [
 ];
 
 const actionColors = {
-  login: 'bg-emerald-500/10 text-emerald-400',
-  logout: 'bg-slate-500/10 text-slate-400',
-  create: 'bg-sky-500/10 text-sky-400',
-  update: 'bg-amber-500/10 text-amber-400',
-  delete: 'bg-red-500/10 text-red-400',
+  login: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-400',
+  logout: 'bg-slate-500/10 text-slate-400 dark:text-slate-500',
+  create: 'bg-sky-50 dark:bg-sky-500/10 text-sky-400',
+  update: 'bg-amber-50 dark:bg-amber-500/10 text-amber-400',
+  delete: 'bg-red-50 dark:bg-red-500/10 text-red-400',
   status_change: 'bg-violet-500/10 text-violet-400',
   upload_image: 'bg-cyan-500/10 text-cyan-400',
   delete_image: 'bg-orange-500/10 text-orange-400',
@@ -69,7 +69,7 @@ export default function AuditLogPage() {
   return (
     <section className="p-8 max-w-7xl mx-auto">
       <div className="mt-12 mb-10">
-        <h2 className="text-3xl font-extrabold font-[Plus_Jakarta_Sans] tracking-tight text-on-surface mb-2">Activity Log</h2>
+        <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface mb-2">Activity Log</h2>
         <p className="text-on-surface-variant font-medium">Track all system actions and changes.</p>
       </div>
 
@@ -98,7 +98,7 @@ export default function AuditLogPage() {
           <p className="text-lg font-medium">No audit logs found.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container shadow-sm dark:shadow-slate-950/20">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-outline-variant bg-surface-container-high/50">
@@ -113,7 +113,7 @@ export default function AuditLogPage() {
                 <tr key={log.id} className="border-b border-outline-variant/50 hover:bg-surface-container-high/30 transition-colors">
                   <td className="px-5 py-3.5 text-on-surface-variant whitespace-nowrap font-mono text-xs">{log.timestamp}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${actionColors[log.action] || 'bg-slate-500/10 text-slate-400'}`}>
+                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${actionColors[log.action] || 'bg-slate-500/10 text-slate-400 dark:text-slate-500'}`}>
                       {log.action}
                     </span>
                   </td>

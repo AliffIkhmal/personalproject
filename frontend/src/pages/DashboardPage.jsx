@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useAuth } from '../contexts/AuthContext';
 import StatCard from '../components/ui/StatCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import Modal from '../components/ui/Modal';
@@ -52,6 +53,8 @@ export default function DashboardPage() {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const socket = useSocket();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const fetchData = useCallback(async () => {
     try {
@@ -207,9 +210,9 @@ export default function DashboardPage() {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-white rounded-xl animate-pulse" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded-xl animate-pulse" />)}
         </div>
-        <div className="h-64 bg-white rounded-xl animate-pulse" />
+        <div className="h-64 bg-white dark:bg-slate-800 rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -234,7 +237,7 @@ export default function DashboardPage() {
               className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                 filter === fb.key
                   ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/20'
-                  : 'text-slate-600 hover:bg-white hover:shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm dark:hover:shadow-slate-950/20'
               }`}
             >
               {fb.label}
@@ -251,23 +254,24 @@ export default function DashboardPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm dark:shadow-slate-950/20 overflow-hidden border border-slate-100 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-[10px] uppercase tracking-[0.15em] font-extrabold text-slate-500">
+              <tr className="bg-slate-50 dark:bg-slate-900 text-[10px] uppercase tracking-[0.15em] font-extrabold text-slate-500 dark:text-slate-400">
                 <th className="px-6 py-4 cursor-pointer select-none" onClick={() => toggleSort('vehicle_name')}>Vehicle Name{sortArrow('vehicle_name')}</th>
                 <th className="px-6 py-4 cursor-pointer select-none" onClick={() => toggleSort('license_plate')}>Plate Number{sortArrow('license_plate')}</th>
                 <th className="px-6 py-4">Service Type</th>
                 <th className="px-6 py-4">Status</th>
+                {isAdmin && <th className="px-6 py-4">Technician</th>}
                 <th className="px-6 py-4 cursor-pointer select-none" onClick={() => toggleSort('estimated_completion')}>Est. Completion{sortArrow('estimated_completion')}</th>
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
               {sortedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={isAdmin ? 7 : 6} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                     <span className="material-symbols-outlined text-4xl mb-2 block">inventory_2</span>
                     <p className="font-semibold">No records found</p>
                     <p className="text-xs mt-1">Add a new service record to get started.</p>
@@ -275,43 +279,48 @@ export default function DashboardPage() {
                 </tr>
               ) : (
                 sortedRecords.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400 group-hover:text-sky-500 transition-colors">
+                        <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-sky-500 transition-colors">
                           <span className="material-symbols-outlined text-lg">directions_car</span>
                         </div>
                         <span className="text-sm font-bold text-on-surface">{r.vehicle_name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">{r.license_plate}</span>
+                      <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{r.license_plate}</span>
                     </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{r.technician_name || '—'}</span>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                         r.service_type === 'Major Service'
-                          ? 'bg-amber-50 text-amber-700 border-amber-100'
-                          : 'bg-sky-50 text-sky-700 border-sky-100'
+                          ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-500/20'
+                          : 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-100 dark:border-sky-500/20'
                       }`}>{r.service_type}</span>
                     </td>
                     <td className="px-6 py-4"><StatusBadge status={r.status} /></td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-semibold text-slate-600">{r.estimated_completion || '—'}</span>
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{r.estimated_completion || '—'}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="inline-flex items-center gap-1">
-                        <button onClick={() => navigate(`/record/${r.id}`)} className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-all" title="View">
+                        <button onClick={() => navigate(`/record/${r.id}`)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-lg transition-all" title="View">
                           <span className="material-symbols-outlined text-lg">visibility</span>
                         </button>
-                        <button onClick={() => openEdit(r)} className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-all" title="Edit">
+                        <button onClick={() => openEdit(r)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-lg transition-all" title="Edit">
                           <span className="material-symbols-outlined text-lg">edit_note</span>
                         </button>
                         {r.status !== 'completed' && (
-                          <button onClick={() => openUpdate(r)} className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-all" title="Update Status">
+                          <button onClick={() => openUpdate(r)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-lg transition-all" title="Update Status">
                             <span className="material-symbols-outlined text-lg">history</span>
                           </button>
                         )}
-                        <button onClick={() => openDelete(r)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                        <button onClick={() => openDelete(r)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete">
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
                       </div>
@@ -322,15 +331,15 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-6 py-4 flex items-center justify-between bg-slate-50/50">
-          <p className="text-[10px] font-bold text-slate-500 uppercase">
+        <div className="px-6 py-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
             Showing {sortedRecords.length} of {pagination.total} vehicles &middot; Page {pagination.page || 1} of {pagination.total_pages || 1}
           </p>
           <div className="flex items-center gap-1">
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <span className="material-symbols-outlined text-lg">chevron_left</span>
             </button>
@@ -343,13 +352,13 @@ export default function DashboardPage() {
               }, [])
               .map((p, i) =>
                 p === '...' ? (
-                  <span key={`dots-${i}`} className="px-1 text-slate-400 text-xs">...</span>
+                  <span key={`dots-${i}`} className="px-1 text-slate-400 dark:text-slate-500 text-xs">...</span>
                 ) : (
                   <button
                     key={p}
                     onClick={() => setPage(p)}
                     className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                      page === p ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:bg-sky-50 hover:text-sky-600'
+                      page === p ? 'bg-sky-500 text-white shadow-sm dark:shadow-slate-950/20' : 'text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-300'
                     }`}
                   >
                     {p}
@@ -359,7 +368,7 @@ export default function DashboardPage() {
             <button
               disabled={page >= (pagination.total_pages || 1)}
               onClick={() => setPage((p) => Math.min(pagination.total_pages || 1, p + 1))}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               <span className="material-symbols-outlined text-lg">chevron_right</span>
             </button>
@@ -372,71 +381,71 @@ export default function DashboardPage() {
         <form onSubmit={handleAdd} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Vehicle Model</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Vehicle Model</label>
               <input value={form.vehicle_name} onChange={(e) => setForm({ ...form, vehicle_name: e.target.value })} required
-                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all outline-none font-semibold" placeholder="e.g. BMW M3" />
+                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-slate-700 transition-all outline-none font-semibold" placeholder="e.g. BMW M3" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Plate Number</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Plate Number</label>
               <input value={form.license_plate} onChange={(e) => setForm({ ...form, license_plate: e.target.value.toUpperCase() })} required
-                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all outline-none font-semibold uppercase" placeholder="ABC-1234" />
+                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-slate-700 transition-all outline-none font-semibold uppercase" placeholder="ABC-1234" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Service Type</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Service Type</label>
             <div className="flex gap-4">
               {SERVICE_TYPES.map((t) => (
                 <label key={t} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  form.service_type === t ? 'border-sky-500 bg-sky-50/30' : 'border-slate-100 bg-slate-50 hover:border-sky-100 hover:bg-white'
+                  form.service_type === t ? 'border-sky-500 bg-sky-50/30 dark:bg-sky-500/10' : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-sky-100 dark:hover:border-sky-500/20 hover:bg-white dark:hover:bg-slate-700'
                 }`}>
                   <input type="radio" name="stype" className="hidden" checked={form.service_type === t} onChange={() => setForm({ ...form, service_type: t })} />
-                  <span className={`material-symbols-outlined ${form.service_type === t ? 'text-sky-500' : 'text-slate-400'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
-                  <span className={`text-xs font-bold ${form.service_type === t ? 'text-sky-700' : 'text-slate-500'}`}>{t}</span>
+                  <span className={`material-symbols-outlined ${form.service_type === t ? 'text-sky-500' : 'text-slate-400 dark:text-slate-500'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
+                  <span className={`text-xs font-bold ${form.service_type === t ? 'text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400'}`}>{t}</span>
                 </label>
               ))}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Status</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Est. Completion</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Est. Completion</label>
               <input type="date" value={form.estimated_completion} onChange={(e) => setForm({ ...form, estimated_completion: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Customer Name</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Customer Name</label>
               <input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" placeholder="Optional" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Phone</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Phone</label>
               <input value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" placeholder="Optional" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Notes</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Notes</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3}
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" placeholder="Service details..." />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Images (optional, multiple)</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Images (optional, multiple)</label>
             <input type="file" accept="image/*" multiple onChange={(e) => setImageFiles([...e.target.files])}
-              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100" />
+              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 dark:file:bg-sky-500/10 file:text-sky-700 dark:file:text-sky-300 dark:bg-sky-500/10 dark:text-sky-300 hover:file:bg-sky-100 dark:hover:file:bg-sky-500/20" />
             {imageFiles.length > 0 && (
-              <p className="text-xs text-slate-500 px-1">{imageFiles.length} file{imageFiles.length > 1 ? 's' : ''} selected</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 px-1">{imageFiles.length} file{imageFiles.length > 1 ? 's' : ''} selected</p>
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+            <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-[2] py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
               {submitting ? 'Creating...' : 'Register Record'}
             </button>
@@ -449,63 +458,63 @@ export default function DashboardPage() {
         <form onSubmit={handleEdit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Vehicle Model</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Vehicle Model</label>
               <input value={editForm.vehicle_name} onChange={(e) => setEditForm({ ...editForm, vehicle_name: e.target.value })} required
-                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all outline-none font-semibold" />
+                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-slate-700 transition-all outline-none font-semibold" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Plate Number</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Plate Number</label>
               <input value={editForm.license_plate} onChange={(e) => setEditForm({ ...editForm, license_plate: e.target.value.toUpperCase() })} required
-                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all outline-none font-semibold uppercase" />
+                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-slate-700 transition-all outline-none font-semibold uppercase" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Service Type</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Service Type</label>
             <div className="flex gap-4">
               {SERVICE_TYPES.map((t) => (
                 <label key={t} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  editForm.service_type === t ? 'border-sky-500 bg-sky-50/30' : 'border-slate-100 bg-slate-50 hover:border-sky-100 hover:bg-white'
+                  editForm.service_type === t ? 'border-sky-500 bg-sky-50/30 dark:bg-sky-500/10' : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-sky-100 dark:hover:border-sky-500/20 hover:bg-white dark:hover:bg-slate-700'
                 }`}>
                   <input type="radio" className="hidden" checked={editForm.service_type === t} onChange={() => setEditForm({ ...editForm, service_type: t })} />
-                  <span className={`material-symbols-outlined ${editForm.service_type === t ? 'text-sky-500' : 'text-slate-400'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
-                  <span className={`text-xs font-bold ${editForm.service_type === t ? 'text-sky-700' : 'text-slate-500'}`}>{t}</span>
+                  <span className={`material-symbols-outlined ${editForm.service_type === t ? 'text-sky-500' : 'text-slate-400 dark:text-slate-500'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
+                  <span className={`text-xs font-bold ${editForm.service_type === t ? 'text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400'}`}>{t}</span>
                 </label>
               ))}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Status</label>
               <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Est. Completion</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Est. Completion</label>
               <input type="date" value={editForm.estimated_completion} onChange={(e) => setEditForm({ ...editForm, estimated_completion: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Customer Name</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Customer Name</label>
               <input value={editForm.customer_name} onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Phone</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Phone</label>
               <input value={editForm.customer_phone} onChange={(e) => setEditForm({ ...editForm, customer_phone: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Notes</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Notes</label>
             <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3}
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setEditOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+            <button type="button" onClick={() => setEditOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-[2] py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
               {submitting ? 'Saving...' : 'Save Changes'}
             </button>
@@ -517,19 +526,19 @@ export default function DashboardPage() {
       <Modal isOpen={updateOpen} onClose={() => setUpdateOpen(false)} title="Update Status" subtitle="Change the current service status.">
         <form onSubmit={handleUpdateStatus} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">New Status</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">New Status</label>
             <select value={updateForm.status} onChange={(e) => setUpdateForm({ ...updateForm, status: e.target.value })}
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold">
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Note (optional)</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Note (optional)</label>
             <textarea value={updateForm.note} onChange={(e) => setUpdateForm({ ...updateForm, note: e.target.value })} rows={3}
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" placeholder="Add a status update note..." />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setUpdateOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+            <button type="button" onClick={() => setUpdateOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-[2] py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
               {submitting ? 'Updating...' : 'Update Status'}
             </button>
@@ -541,16 +550,16 @@ export default function DashboardPage() {
       <Modal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} title="Confirm Deletion" subtitle="This action cannot be undone.">
         {deleteTarget && (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-red-50 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-500/10 rounded-xl">
               <span className="material-symbols-outlined text-red-500 text-3xl">warning</span>
               <div>
                 <p className="font-bold text-on-surface">{deleteTarget.vehicle_name}</p>
-                <p className="text-sm font-mono text-slate-500">{deleteTarget.license_plate}</p>
+                <p className="text-sm font-mono text-slate-500 dark:text-slate-400">{deleteTarget.license_plate}</p>
               </div>
             </div>
             <p className="text-sm text-on-surface-variant">Are you sure you want to permanently delete this service record? This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+              <button onClick={() => setDeleteOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
               <button onClick={handleDelete} disabled={submitting}
                 className="flex-[2] py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-xl shadow-red-600/20 hover:bg-red-700 active:scale-[0.98] transition-all disabled:opacity-60">
                 {submitting ? 'Deleting...' : 'Delete Record'}

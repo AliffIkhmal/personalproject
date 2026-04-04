@@ -1,7 +1,7 @@
 const statusConfig = {
-  pending: { dot: 'bg-blue-500', text: 'text-blue-700', label: 'Queued' },
-  in_progress: { dot: 'bg-amber-500 animate-pulse', text: 'text-amber-700', label: 'In Progress' },
-  completed: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Completed' },
+  pending: { dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', label: 'Queued' },
+  in_progress: { dot: 'bg-amber-500 animate-pulse', text: 'text-amber-700 dark:text-amber-300', label: 'In Progress' },
+  completed: { dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', label: 'Completed' },
 };
 
 export default function StatusBadge({ status }) {

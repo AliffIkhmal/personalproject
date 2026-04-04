@@ -83,8 +83,8 @@ export default function CustomersPage() {
   if (loading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="h-12 bg-white rounded-xl animate-pulse mb-6" />
-        <div className="h-64 bg-white rounded-xl animate-pulse" />
+        <div className="h-12 bg-white dark:bg-slate-800 rounded-xl animate-pulse mb-6" />
+        <div className="h-64 bg-white dark:bg-slate-800 rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold font-[Plus_Jakarta_Sans] tracking-tight text-on-surface">Customers</h2>
+          <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Customers</h2>
           <p className="text-on-surface-variant font-medium mt-1">Manage customer profiles and service history.</p>
         </div>
         <button
@@ -115,7 +115,7 @@ export default function CustomersPage() {
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-medium text-on-surface placeholder-outline focus:ring-2 focus:ring-primary focus:bg-white transition-all shadow-sm"
+          className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-xl text-sm font-medium text-on-surface placeholder-outline focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-700 transition-all shadow-sm dark:shadow-slate-950/20"
           placeholder="Search by name, phone, or email..."
         />
       </form>
@@ -126,21 +126,21 @@ export default function CustomersPage() {
           <div className="w-24 h-24 rounded-full bg-surface-container-low flex items-center justify-center mb-6">
             <span className="material-symbols-outlined text-5xl text-outline">people_outline</span>
           </div>
-          <h3 className="text-xl font-[Plus_Jakarta_Sans] font-bold text-on-surface">No customers yet</h3>
+          <h3 className="text-xl font-headline font-bold text-on-surface">No customers yet</h3>
           <p className="text-on-surface-variant max-w-xs mt-2 font-medium">Add your first customer to start tracking service history.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {customers.map((c) => (
-            <div key={c.id} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-sky-100">
+            <div key={c.id} className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm dark:shadow-slate-950/20 hover:shadow-xl transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-sky-100 dark:hover:border-sky-500/20">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-sky-500" />
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-sky-50 dark:bg-sky-500/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-sky-600 text-xl">person</span>
                   </div>
                   <div>
-                    <h3 className="font-[Plus_Jakarta_Sans] font-bold text-lg text-on-surface">{c.name}</h3>
+                    <h3 className="font-headline font-bold text-lg text-on-surface">{c.name}</h3>
                     {c.email && <p className="text-xs font-medium text-on-surface-variant">{c.email}</p>}
                   </div>
                 </div>
@@ -169,7 +169,7 @@ export default function CustomersPage() {
                 </button>
                 <button
                   onClick={() => openDelete(c)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                   title="Delete"
                 >
                   <span className="material-symbols-outlined text-lg">delete</span>
@@ -186,7 +186,7 @@ export default function CustomersPage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="p-2 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <span className="material-symbols-outlined text-lg">chevron_left</span>
           </button>
@@ -199,13 +199,13 @@ export default function CustomersPage() {
             }, [])
             .map((p, i) =>
               p === '...' ? (
-                <span key={`dots-${i}`} className="px-1 text-slate-400 text-xs">...</span>
+                <span key={`dots-${i}`} className="px-1 text-slate-400 dark:text-slate-500 text-xs">...</span>
               ) : (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
                   className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${
-                    page === p ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-500 hover:bg-sky-50 hover:text-sky-600'
+                    page === p ? 'bg-sky-500 text-white shadow-sm dark:shadow-slate-950/20' : 'text-slate-500 dark:text-slate-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 hover:text-sky-600 dark:hover:text-sky-300'
                   }`}
                 >
                   {p}
@@ -215,7 +215,7 @@ export default function CustomersPage() {
           <button
             disabled={page >= pagination.total_pages}
             onClick={() => setPage((p) => Math.min(pagination.total_pages, p + 1))}
-            className="p-2 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             <span className="material-symbols-outlined text-lg">chevron_right</span>
           </button>
@@ -226,29 +226,29 @@ export default function CustomersPage() {
       <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="New Customer" subtitle="Enter customer information.">
         <form onSubmit={handleAdd} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Full Name *</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Full Name *</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required
-              className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all outline-none font-semibold" placeholder="e.g. John Smith" />
+              className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 focus:bg-white dark:focus:bg-slate-700 transition-all outline-none font-semibold" placeholder="e.g. John Smith" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Phone</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Phone</label>
               <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" placeholder="Optional" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Email</label>
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" placeholder="Optional" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Address</label>
+            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Address</label>
             <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2}
               className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" placeholder="Optional" />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+            <button type="button" onClick={() => setAddOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-[2] py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
               {submitting ? 'Creating...' : 'Add Customer'}
             </button>
@@ -262,7 +262,7 @@ export default function CustomersPage() {
           Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? Linked service records will be unlinked but not deleted.
         </p>
         <div className="flex gap-3">
-          <button onClick={() => setDeleteOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+          <button onClick={() => setDeleteOpen(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancel</button>
           <button onClick={handleDelete} disabled={submitting} className="flex-[2] py-3 bg-red-500 text-white rounded-xl font-bold text-sm shadow-xl shadow-red-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
             {submitting ? 'Deleting...' : 'Delete Customer'}
           </button>

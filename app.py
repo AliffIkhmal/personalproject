@@ -68,6 +68,18 @@ def require_auth():
     return session['user_id']
 
 
+def is_admin():
+    """Check if the current session user is an admin."""
+    return session.get('role') == 'admin'
+
+
+def require_admin():
+    """Return 403 JSON response if the user is not admin, else None."""
+    if not is_admin():
+        return jsonify({'error': 'Admin access required.'}), 403
+    return None
+
+
 # Create the Flask app — serve React build in production
 app = Flask(__name__, static_folder=None)
 app.secret_key = load_or_create_secret_key()
@@ -102,11 +114,19 @@ limiter = Limiter(
 # DATABASE MODELS (SQLAlchemy ORM)
 # ------------------------------------------
 
+VALID_ROLES = {'admin', 'technician'}
+
 class Technician(db.Model):
     __tablename__ = 'technicians'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default='technician', nullable=False)
+    profile_picture = db.Column(db.String(200), nullable=True)
+    display_name = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(30), nullable=True)
+    created_at = db.Column(db.String(30), nullable=True)
     records = db.relationship('ServiceRecord', backref='technician', lazy=True)
 
 class ServiceRecord(db.Model):
@@ -180,12 +200,15 @@ def emit_update(event='records_updated', data=None):
 
 
 def add_default_technician():
-    """Add a default technician account if the database is empty."""
-    if Technician.query.first() is None:
-        tech = Technician(username='admin', password=generate_password_hash('admin123'))
-        db.session.add(tech)
-        db.session.commit()
-        print('Default technician created: admin / admin123')
+    """Add a default admin account if the database is empty."""
+    try:
+        if Technician.query.first() is None:
+            tech = Technician(username='admin', password=generate_password_hash('admin123'), role='admin', created_at=now_gmt8())
+            db.session.add(tech)
+            db.session.commit()
+            print('Default admin created: admin / admin123')
+    except Exception:
+        db.session.rollback()
 
 
 # ------------------------------------------
@@ -195,7 +218,9 @@ def add_default_technician():
 @app.route('/api/auth/check', methods=['GET'])
 def auth_check():
     if 'user_id' in session:
-        return jsonify({'authenticated': True, 'user': {'id': session['user_id'], 'username': session['username']}})
+        tech = Technician.query.get(session['user_id'])
+        profile_picture = tech.profile_picture if tech else None
+        return jsonify({'authenticated': True, 'user': {'id': session['user_id'], 'username': session['username'], 'role': session.get('role', 'technician'), 'profile_picture': profile_picture, 'display_name': tech.display_name if tech else None, 'email': tech.email if tech else None, 'phone': tech.phone if tech else None, 'created_at': tech.created_at if tech else None}})
     return jsonify({'authenticated': False})
 
 
@@ -211,9 +236,10 @@ def api_login():
     if technician and check_password_hash(technician.password, password):
         session['user_id'] = technician.id
         session['username'] = technician.username
+        session['role'] = technician.role
         log_audit('login', 'technician', technician.id, f'User "{username}" logged in.',
                   user_id=technician.id, username=technician.username)
-        return jsonify({'success': True, 'user': {'id': technician.id, 'username': technician.username}})
+        return jsonify({'success': True, 'user': {'id': technician.id, 'username': technician.username, 'role': technician.role, 'profile_picture': technician.profile_picture, 'display_name': technician.display_name, 'email': technician.email, 'phone': technician.phone, 'created_at': technician.created_at}})
 
     return jsonify({'success': False, 'error': 'Invalid username or password.'}), 401
 
@@ -253,7 +279,7 @@ def api_dashboard():
     page = max(page, 1)
     offset = (page - 1) * per_page
 
-    base_query = ServiceRecord.query.filter_by(technician_id=user_id)
+    base_query = ServiceRecord.query if is_admin() else ServiceRecord.query.filter_by(technician_id=user_id)
     total_count = base_query.count()
     active_count = base_query.filter_by(status='in_progress').count()
     completed_count = base_query.filter_by(status='completed').count()
@@ -263,8 +289,16 @@ def api_dashboard():
 
     total_pages = math.ceil(total_count / per_page) if per_page else 1
 
+    # Include technician name for admin view
+    records_list = []
+    for r in records:
+        rd = row_to_dict(r)
+        if is_admin() and r.technician:
+            rd['technician_name'] = r.technician.username
+        records_list.append(rd)
+
     return jsonify({
-        'records': [row_to_dict(r) for r in records],
+        'records': records_list,
         'stats': {
             'total': total_count,
             'active': active_count,
@@ -385,7 +419,7 @@ def api_update_status(record_id):
     if not new_status or new_status not in VALID_STATUSES:
         return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
     if record is None:
         return jsonify({'error': 'Record not found or access denied.'}), 404
 
@@ -409,7 +443,7 @@ def api_view_record(record_id):
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
 
     if record is None:
         return jsonify({'error': 'Record not found.'}), 404
@@ -433,7 +467,7 @@ def api_upload_images(record_id):
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
     if record is None:
         return jsonify({'error': 'Record not found or access denied.'}), 404
 
@@ -474,7 +508,7 @@ def api_delete_image(record_id, image_id):
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
     if record is None:
         return jsonify({'error': 'Record not found or access denied.'}), 404
 
@@ -514,7 +548,7 @@ def api_search():
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
 
-    base = ServiceRecord.query.filter(ServiceRecord.technician_id == user_id)
+    base = ServiceRecord.query if is_admin() else ServiceRecord.query.filter(ServiceRecord.technician_id == user_id)
 
     # Text search (license plate, customer name, vehicle name, notes)
     if query:
@@ -542,7 +576,12 @@ def api_search():
 
     total = base.count()
     records = base.order_by(ServiceRecord.updated_at.desc()).offset(offset).limit(per_page).all()
-    results = [row_to_dict(r) for r in records]
+    results = []
+    for r in records:
+        rd = row_to_dict(r)
+        if is_admin() and r.technician:
+            rd['technician_name'] = r.technician.username
+        results.append(rd)
 
     total_pages = math.ceil(total / per_page) if per_page and total else 1
 
@@ -579,7 +618,7 @@ def api_edit_record(record_id):
     if status and status not in VALID_STATUSES:
         return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
     if record is None:
         return jsonify({'error': 'Record not found or access denied.'}), 404
 
@@ -606,7 +645,7 @@ def api_delete_record(record_id):
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
-    record = ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
+    record = ServiceRecord.query.get(record_id) if is_admin() else ServiceRecord.query.filter_by(id=record_id, technician_id=user_id).first()
     if record is None:
         return jsonify({'error': 'Record not found or access denied.'}), 404
 
@@ -632,10 +671,15 @@ def api_register():
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
     data = safe_get_json()
     username = data.get('username', '').strip()
     password = data.get('password', '')
     confirm_password = data.get('confirm_password', '')
+    role = data.get('role', 'technician').strip()
 
     if not username or not password:
         return jsonify({'error': 'Username and password are required.'}), 400
@@ -645,17 +689,19 @@ def api_register():
         return jsonify({'error': 'Password must be at least 6 characters.'}), 400
     if password != confirm_password:
         return jsonify({'error': 'Passwords do not match.'}), 400
+    if role not in VALID_ROLES:
+        return jsonify({'error': f'Invalid role. Must be one of: {VALID_ROLES}'}), 400
 
     existing = Technician.query.filter_by(username=username).first()
     if existing:
         return jsonify({'error': f'Username "{username}" is already taken.'}), 409
 
     hashed_password = generate_password_hash(password)
-    tech = Technician(username=username, password=hashed_password)
+    tech = Technician(username=username, password=hashed_password, role=role, created_at=now_gmt8())
     db.session.add(tech)
     db.session.commit()
 
-    log_audit('register', 'technician', tech.id, f'Registered new technician "{username}".')
+    log_audit('register', 'technician', tech.id, f'Registered new {role} "{username}".')
     return jsonify({'success': True}), 201
 
 
@@ -689,11 +735,130 @@ def api_change_password():
     return jsonify({'success': True})
 
 
+@app.route('/api/user/profile-picture', methods=['POST'])
+def api_upload_profile_picture():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image provided.'}), 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected.'}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+    technician = Technician.query.get(user_id)
+    if not technician:
+        return jsonify({'error': 'User not found.'}), 404
+
+    # Delete old profile picture file if it exists
+    if technician.profile_picture:
+        old_path = os.path.join(app.config['UPLOAD_FOLDER'], technician.profile_picture)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    filename = secure_filename(f"pfp_{user_id}_{int(__import__('time').time())}.{ext}")
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+    technician.profile_picture = filename
+    db.session.commit()
+
+    log_audit('update', 'technician', user_id, f'User "{session.get("username")}" updated profile picture.')
+    return jsonify({'success': True, 'profile_picture': filename})
+
+
+@app.route('/api/user/profile-picture', methods=['DELETE'])
+def api_delete_profile_picture():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    technician = Technician.query.get(user_id)
+    if not technician:
+        return jsonify({'error': 'User not found.'}), 404
+
+    if technician.profile_picture:
+        old_path = os.path.join(app.config['UPLOAD_FOLDER'], technician.profile_picture)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+        technician.profile_picture = None
+        db.session.commit()
+        log_audit('update', 'technician', user_id, f'User "{session.get("username")}" removed profile picture.')
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/profile', methods=['GET'])
+def api_get_profile():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    technician = Technician.query.get(user_id)
+    if not technician:
+        return jsonify({'error': 'User not found.'}), 404
+
+    records_count = ServiceRecord.query.filter_by(technician_id=user_id).count()
+
+    return jsonify({
+        'display_name': technician.display_name,
+        'email': technician.email,
+        'phone': technician.phone,
+        'created_at': technician.created_at,
+        'records_count': records_count,
+    })
+
+
+@app.route('/api/user/profile', methods=['PUT'])
+def api_update_profile():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    technician = Technician.query.get(user_id)
+    if not technician:
+        return jsonify({'error': 'User not found.'}), 404
+
+    data = safe_get_json()
+    display_name = data.get('display_name', '').strip()
+    email = data.get('email', '').strip()
+    phone = data.get('phone', '').strip()
+
+    if email and '@' not in email:
+        return jsonify({'error': 'Invalid email address.'}), 400
+    if phone and len(phone) > 30:
+        return jsonify({'error': 'Phone number too long.'}), 400
+    if display_name and len(display_name) > 120:
+        return jsonify({'error': 'Display name too long.'}), 400
+
+    technician.display_name = display_name or None
+    technician.email = email or None
+    technician.phone = phone or None
+    db.session.commit()
+
+    log_audit('update', 'technician', user_id, f'User "{session.get("username")}" updated profile info.')
+    return jsonify({
+        'success': True,
+        'display_name': technician.display_name,
+        'email': technician.email,
+        'phone': technician.phone,
+    })
+
+
 @app.route('/api/audit-logs', methods=['GET'])
 def api_audit_logs():
     user_id = require_auth()
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
@@ -838,6 +1003,10 @@ def api_delete_customer(customer_id):
     user_id = require_auth()
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
 
     customer = Customer.query.get(customer_id)
     if customer is None:

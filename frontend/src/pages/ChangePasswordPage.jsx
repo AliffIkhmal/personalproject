@@ -26,7 +26,7 @@ export default function ChangePasswordPage() {
       });
       if (data.success) {
         addToast('Password changed successfully!', 'success');
-        navigate('/dashboard');
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
       } else {
         addToast(data.error || 'Failed to change password.', 'error');
       }
@@ -40,7 +40,7 @@ export default function ChangePasswordPage() {
   return (
     <main className="p-8 min-h-[calc(100vh-4rem)] flex items-center justify-center">
       <div className="w-full max-w-xl">
-        <div className="bg-white rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden relative border border-outline-variant/10">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden relative border border-outline-variant/10">
           <div className="h-1.5 w-full indigo-pulse" />
           <div className="p-10">
             <div className="mb-8">
@@ -48,7 +48,7 @@ export default function ChangePasswordPage() {
                 <div className="w-8 h-8 rounded bg-primary-container/10 flex items-center justify-center text-primary">
                   <span className="material-symbols-outlined text-xl">lock_open</span>
                 </div>
-                <h2 className="text-2xl font-[Plus_Jakarta_Sans] font-bold tracking-tight text-on-surface">Security Settings</h2>
+                <h2 className="text-2xl font-headline font-bold tracking-tight text-on-surface">Change Password</h2>
               </div>
               <p className="text-on-surface-variant text-sm font-medium">Update your account credentials to maintain workspace security.</p>
             </div>
@@ -65,12 +65,12 @@ export default function ChangePasswordPage() {
 
               <div className="pt-4 flex flex-col md:flex-row gap-4">
                 <button type="submit" disabled={loading}
-                  className="flex-1 indigo-pulse text-white font-[Plus_Jakarta_Sans] font-bold py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                  className="flex-1 indigo-pulse text-white font-headline font-bold py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
                   {loading ? 'Updating...' : 'Update Password'}
                 </button>
                 <button type="button" onClick={() => navigate('/dashboard')}
-                  className="px-8 py-4 bg-surface-container-high text-on-surface-variant font-[Plus_Jakarta_Sans] font-bold rounded-xl hover:bg-surface-dim transition-colors active:scale-[0.98]">
+                  className="px-8 py-4 bg-surface-container-high text-on-surface-variant font-headline font-bold rounded-xl hover:bg-surface-dim transition-colors active:scale-[0.98]">
                   Cancel
                 </button>
               </div>

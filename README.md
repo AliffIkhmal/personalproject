@@ -1,57 +1,103 @@
-# Personal Project
+# Vehicle Service Tracking System
 
-## Overview
-This is a Python-based web application designed to manage and track vehicle maintenance and repair records. The project features user authentication, a dashboard, search functionality, and a clean interface for both customers and technicians.
+A full-stack web application for managing and tracking vehicle maintenance and service records. Built with a **React SPA** frontend and **Flask JSON API** backend.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Vite 8, Tailwind CSS v4, React Router v7, Socket.IO Client |
+| Backend | Flask 3.1, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-SocketIO, Flask-Limiter |
+| Database | SQLite (dev) / PostgreSQL (production via `DATABASE_URL`) |
+| Real-Time | WebSockets via Flask-SocketIO + Socket.IO Client |
 
 ## Features
-- User registration and login
-- Dashboard for managing records
-- Search and filter vehicle records
-- Password change functionality
-- File uploads (e.g., images)
-- Responsive UI with HTML, CSS, and JavaScript
+
+- **Authentication** — Session-based login/logout, technician registration, password change
+- **User Profiles** — Profile picture upload, display name, email, phone, account stats
+- **Dashboard** — Service records table with sorting, filtering, pagination, and stat cards
+- **Record Management** — Full CRUD for service records with status workflow (Queued → In Progress → Completed)
+- **Image Gallery** — Multi-image upload per record with lightbox preview
+- **Customer Management** — Dedicated customer profiles with linked service history
+- **Advanced Search** — Text search with filters by status, service type, and date range
+- **Real-Time Updates** — WebSocket-powered live dashboard refresh across all connected clients
+- **Activity Log** — Full audit trail of all actions (create, update, delete, status changes, logins)
+- **Dark Mode** — Theme toggle with localStorage persistence and WCAG AA contrast ratios
+- **Security** — Rate limiting, CSRF protection, HTTP-only session cookies, input validation
+- **Responsive UI** — Steel blue (#7DAACB) and warm beige (#E8DBB3) color scheme with floating label inputs, password visibility toggles, and caps lock detection
 
 ## Project Structure
+
 ```
-app.py                # Main application file
-requirements.txt      # Python dependencies
-routes/               # Application routes
-static/               # Static files (JS, CSS, images)
-templates/            # HTML templates
-notes/                # Project notes and documentation
-instance/             # Instance-specific files (e.g., database)
+app.py                          # Flask JSON API backend (routes, models, auth)
+requirements.txt                # Python dependencies
+migrations/                     # Alembic database migrations
+instance/                       # SQLite database file
+static/uploads/                 # Uploaded images (profile pictures, service photos)
+frontend/
+├── src/
+│   ├── App.jsx                 # Router and app shell
+│   ├── api.js                  # API client (fetch wrapper)
+│   ├── contexts/
+│   │   ├── AuthContext.jsx     # Authentication state
+│   │   ├── SocketContext.jsx   # WebSocket connection
+│   │   ├── ThemeContext.jsx    # Dark/light theme state
+│   │   └── ToastContext.jsx    # Toast notifications
+│   ├── components/
+│   │   ├── layout/             # Sidebar, TopAppBar, DashboardLayout
+│   │   └── ui/                 # Modal, StatCard, StatusBadge, FloatingInput
+│   └── pages/
+│       ├── DashboardPage.jsx   # Main dashboard with records table
+│       ├── SearchPage.jsx      # Search with advanced filters
+│       ├── CustomersPage.jsx   # Customer list and management
+│       ├── CustomerDetailPage.jsx  # Customer profile and service history
+│       ├── RecordDetailPage.jsx    # Record detail with image gallery
+│       ├── AuditLogPage.jsx    # Activity/audit log viewer
+│       ├── ProfilePage.jsx     # Profile picture, info, and account stats
+│       ├── ChangePasswordPage.jsx  # Password change
+│       ├── RegisterPage.jsx    # Technician registration (admin)
+│       ├── LoginPage.jsx       # Login with customer status lookup
+│       └── ErrorPage.jsx       # 404 page
+└── vite.config.js              # Vite config with API/WebSocket proxy
 ```
 
 ## Setup Instructions
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/AliffIkhmal/personalproject.git
-   cd personalproject
-   ```
-2. Create and activate a virtual environment (optional but recommended):
-   ```sh
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-3. Install dependencies:
-   ```sh
-   pip install -r requirements.txt
-   ```
-4. Run the application:
-   ```sh
-   python app.py
-   ```
 
-## Usage
-- Access the app in your browser at `http://localhost:5000` (or the port specified in your app).
-- Register a new user or log in with existing credentials.
-- Use the dashboard to manage and search vehicle records.
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
 
-## Contributing
-Contributions are welcome! Please fork the repository and submit a pull request.
+### Backend
+```sh
+git clone https://github.com/AliffIkhmal/personalproject.git
+cd personalproject
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
+pip install -r requirements.txt
+python app.py
+```
+The API runs on `http://localhost:5000`. A default technician account (`admin` / `admin123`) is created on first run.
+
+### Frontend
+```sh
+cd frontend
+npm install
+npm run dev
+```
+The dev server runs on `http://localhost:5173` and proxies API requests to the Flask backend.
+
+### Production Build
+```sh
+cd frontend
+npm run build
+```
+Flask serves the built React app from `frontend/dist/` automatically.
+
+## Default Login
+| Username | Password |
+|----------|----------|
+| admin    | admin123 |
 
 ## License
 This project is licensed under the MIT License.

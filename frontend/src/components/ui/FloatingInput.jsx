@@ -19,7 +19,7 @@ export default function FloatingInput({ label, icon, type = 'text', value, onCha
       <div className="relative group">
         {/* Icon */}
         <span className={`absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl transition-colors duration-200 ${
-          focused ? 'text-primary' : 'text-slate-400'
+          focused ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
         }`}>{icon}</span>
 
         {/* Input */}
@@ -34,8 +34,8 @@ export default function FloatingInput({ label, icon, type = 'text', value, onCha
           required={required}
           className={`peer block w-full pl-12 ${isPassword ? 'pr-12' : 'pr-4'} pt-5 pb-2 bg-surface-container-low rounded-xl text-on-surface text-sm font-semibold transition-all duration-200 outline-none border-2 ${
             focused
-              ? 'border-primary bg-white ring-4 ring-primary/10'
-              : 'border-transparent hover:border-slate-200'
+              ? 'border-primary bg-white dark:bg-slate-800 ring-4 ring-primary/10'
+              : 'border-transparent hover:border-slate-200 dark:hover:border-slate-600'
           }`}
           placeholder=" "
         />
@@ -46,7 +46,7 @@ export default function FloatingInput({ label, icon, type = 'text', value, onCha
             type="button"
             tabIndex={-1}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-on-surface transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-on-surface transition-colors"
           >
             <span className="material-symbols-outlined text-xl">
               {showPassword ? 'visibility_off' : 'visibility'}
@@ -59,7 +59,7 @@ export default function FloatingInput({ label, icon, type = 'text', value, onCha
           isActive
             ? 'top-1.5 text-[10px] uppercase tracking-widest'
             : 'top-1/2 -translate-y-1/2 text-sm'
-        } ${focused ? 'text-primary' : 'text-slate-400'}`}>
+        } ${focused ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
           {label}
         </label>
 

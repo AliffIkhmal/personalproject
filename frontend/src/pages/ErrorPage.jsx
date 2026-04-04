@@ -9,8 +9,8 @@ export default function ErrorPage() {
         <div className="w-24 h-24 rounded-full bg-surface-container-low flex items-center justify-center mx-auto mb-6">
           <span className="material-symbols-outlined text-5xl text-outline">explore_off</span>
         </div>
-        <h1 className="text-6xl font-[Plus_Jakarta_Sans] font-extrabold text-on-surface mb-2">404</h1>
-        <h2 className="text-xl font-[Plus_Jakarta_Sans] font-bold text-on-surface mb-4">Page Not Found</h2>
+        <h1 className="text-6xl font-headline font-extrabold text-on-surface mb-2">404</h1>
+        <h2 className="text-xl font-headline font-bold text-on-surface mb-4">Page Not Found</h2>
         <p className="text-on-surface-variant mb-8 max-w-sm mx-auto">The page you are looking for doesn't exist or has been moved.</p>
         <button
           onClick={() => navigate('/dashboard')}

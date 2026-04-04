@@ -59,9 +59,9 @@ export default function LoginPage() {
 
   const statusLabel = { pending: 'Queued', in_progress: 'In Progress', completed: 'Completed' };
   const statusColor = {
-    pending: 'bg-blue-100 text-blue-700',
-    in_progress: 'bg-amber-100 text-amber-700',
-    completed: 'bg-emerald-100 text-emerald-700',
+    pending: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300',
+    in_progress: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    completed: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   };
 
   return (
@@ -73,10 +73,10 @@ export default function LoginPage() {
       </div>
 
       <main className="relative z-10 w-full max-w-[440px]">
-        <div className="bg-white rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden border border-outline-variant/10">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden border border-outline-variant/10">
           {/* Brand Header */}
           <div className="pt-10 pb-8 px-8 flex flex-col items-center">
-            <h1 className="font-[Plus_Jakarta_Sans] font-extrabold text-3xl tracking-tighter text-on-surface">ServiceTrack</h1>
+            <h1 className="font-headline font-extrabold text-3xl tracking-tighter text-on-surface">ServiceTrack</h1>
             <p className="text-on-surface-variant text-sm uppercase tracking-[0.05em] mt-1 opacity-70">Precision Engineering</p>
           </div>
 
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full indigo-pulse text-white py-4 rounded-xl font-[Plus_Jakarta_Sans] font-bold text-sm tracking-wide shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group mt-2 disabled:opacity-60"
+                  className="w-full indigo-pulse text-white py-4 rounded-xl font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group mt-2 disabled:opacity-60"
                 >
                   <span>{loading ? 'Signing In...' : 'Sign In'}</span>
                   {!loading && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>}
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-on-surface text-white py-4 rounded-xl font-[Plus_Jakarta_Sans] font-bold text-sm tracking-wide shadow-xl shadow-on-surface/10 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group disabled:opacity-60"
+                    className="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 py-4 rounded-xl font-headline font-bold text-sm tracking-wide shadow-xl shadow-slate-900/10 dark:shadow-slate-100/10 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group disabled:opacity-60"
                   >
                     <span>{loading ? 'Checking...' : 'Check Status'}</span>
                     {!loading && <span className="material-symbols-outlined text-[18px]">search</span>}
@@ -133,8 +133,8 @@ export default function LoginPage() {
                   <div className="mt-6 p-6 bg-surface-container-low rounded-xl space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-[Plus_Jakarta_Sans] font-bold text-lg">{customerResult.vehicle_name}</h3>
-                        <code className="text-sm font-mono text-sky-600 font-bold bg-sky-50 px-2 py-0.5 rounded">{customerResult.license_plate}</code>
+                        <h3 className="font-headline font-bold text-lg">{customerResult.vehicle_name}</h3>
+                        <code className="text-sm font-mono text-sky-600 font-bold bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 rounded">{customerResult.license_plate}</code>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor[customerResult.status] || ''}`}>
                         {statusLabel[customerResult.status] || customerResult.status}
@@ -152,7 +152,7 @@ export default function LoginPage() {
 
             <div className="mt-8 pt-6 border-t border-outline-variant/10 text-center">
               <p className="text-[13px] text-on-surface-variant font-medium">
-                Default credentials: <code className="bg-slate-100 px-1 rounded text-xs">admin / admin123</code>
+                Default credentials: <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">admin / admin123</code>
               </p>
             </div>
           </div>
