@@ -64,7 +64,7 @@ export default function RegisterPage() {
             </div>
             <div className="pt-2">
               <button type="submit" disabled={loading}
-                className="w-full py-4 rounded-xl indigo-pulse text-white font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60">
+                className="w-full py-4 rounded-xl indigo-pulse text-white font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                 <span>{loading ? 'Creating...' : 'Create Account'}</span>
                 {!loading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
               </button>

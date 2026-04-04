@@ -227,7 +227,7 @@ export default function SearchPage() {
             </div>
             <h3 className="text-xl font-headline font-bold text-on-surface">No vehicles found</h3>
             <p className="text-on-surface-variant max-w-xs mt-2 font-medium">We couldn't find any results matching your search criteria.</p>
-            <button onClick={clearAll} className="mt-8 px-6 py-2 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-white font-bold text-sm indigo-pulse shadow-lg shadow-sky-200">
+            <button onClick={clearAll} className="mt-8 px-6 py-2 rounded-xl indigo-pulse text-white font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
               Clear Search
             </button>
           </div>

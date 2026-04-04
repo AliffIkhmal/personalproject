@@ -178,7 +178,7 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full py-3.5 rounded-xl font-headline font-bold text-sm tracking-wide bg-sky-500 text-white hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 transition-all shadow-md hover:shadow-lg disabled:opacity-60"
+                className="w-full py-3.5 rounded-xl indigo-pulse text-white font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>

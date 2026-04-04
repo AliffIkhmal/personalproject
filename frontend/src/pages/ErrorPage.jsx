@@ -14,7 +14,7 @@ export default function ErrorPage() {
         <p className="text-on-surface-variant mb-8 max-w-sm mx-auto">The page you are looking for doesn't exist or has been moved.</p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="px-6 py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform"
+          className="px-6 py-3 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           Back to Dashboard
         </button>

@@ -4,6 +4,8 @@ import api from '../api';
 import { useToast } from '../contexts/ToastContext';
 import StatusBadge from '../components/ui/StatusBadge';
 
+import { getChecklistGroups } from '../data/serviceChecklist';
+
 export default function RecordDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -169,6 +171,43 @@ export default function RecordDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Service Checklist */}
+          {(() => {
+            let checklist = [];
+            try { checklist = record.checklist ? JSON.parse(record.checklist) : []; } catch { checklist = []; }
+            if (!checklist.length) return null;
+            const groups = getChecklistGroups(checklist);
+            const checked = checklist.filter((c) => c.checked).length;
+            const total = checklist.length;
+            const pct = Math.round((checked / total) * 100);
+            return (
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-8 shadow-sm dark:shadow-slate-950/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-[0.1em] uppercase">Service Checklist</h3>
+                  <span className="text-xs font-bold text-sky-600 dark:text-sky-400">{checked}/{total} completed ({pct}%)</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-6">
+                  <div className="h-full indigo-pulse rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                  {Object.entries(groups).map(([cat, items]) => (
+                    <div key={cat} className="col-span-2 sm:col-span-1 space-y-1 mb-3">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{cat}</p>
+                      {items.map((entry) => (
+                        <div key={entry.item} className={`flex items-center gap-2 p-2 rounded-lg ${entry.checked ? 'bg-sky-50 dark:bg-sky-500/10' : ''}`}>
+                          <span className={`material-symbols-outlined text-base ${entry.checked ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                            {entry.checked ? 'check_circle' : 'radio_button_unchecked'}
+                          </span>
+                          <span className={`text-xs ${entry.checked ? 'text-sky-700 dark:text-sky-300 font-semibold line-through' : 'text-slate-600 dark:text-slate-300'}`}>{entry.item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Notes */}
           <div className="bg-white dark:bg-slate-800 rounded-xl p-8 shadow-sm dark:shadow-slate-950/20">

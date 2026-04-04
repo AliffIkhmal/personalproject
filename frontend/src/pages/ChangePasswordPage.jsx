@@ -65,7 +65,7 @@ export default function ChangePasswordPage() {
 
               <div className="pt-4 flex flex-col md:flex-row gap-4">
                 <button type="submit" disabled={loading}
-                  className="flex-1 indigo-pulse text-white font-headline font-bold py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                  className="flex-1 indigo-pulse text-white font-bold text-sm py-4 rounded-xl shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
                   {loading ? 'Updating...' : 'Update Password'}
                 </button>

@@ -145,6 +145,7 @@ class ServiceRecord(db.Model):
     updated_at = db.Column(db.String(30))
     image_filename = db.Column(db.String(200))
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    checklist = db.Column(db.Text, nullable=True)  # JSON: [{"item": "...", "checked": true/false}, ...]
     images = db.relationship('ServiceImage', backref='record', lazy=True, cascade='all, delete-orphan')
 
 class ServiceImage(db.Model):
@@ -331,6 +332,7 @@ def api_add_record():
         customer_phone = request.form.get('customer_phone', '').strip()
         estimated_completion = request.form.get('estimated_completion', '').strip()
         notes = request.form.get('notes', '').strip()
+        checklist = request.form.get('checklist', '').strip() or None
         image_file = request.files.get('image')
         image_files = request.files.getlist('images')
     else:
@@ -343,6 +345,7 @@ def api_add_record():
         customer_phone = data.get('customer_phone', '').strip()
         estimated_completion = data.get('estimated_completion', '').strip()
         notes = data.get('notes', '').strip()
+        checklist = data.get('checklist', '').strip() if isinstance(data.get('checklist'), str) else None
         image_file = None
         image_files = []
 
@@ -379,6 +382,7 @@ def api_add_record():
         created_at=timestamp,
         updated_at=timestamp,
         image_filename=image_filename,
+        checklist=checklist,
     )
     db.session.add(record)
     db.session.flush()  # get record.id
@@ -630,6 +634,9 @@ def api_edit_record(record_id):
     record.customer_phone = customer_phone
     record.estimated_completion = estimated_completion
     record.notes = notes
+    checklist = data.get('checklist')
+    if checklist is not None:
+        record.checklist = checklist if isinstance(checklist, str) else None
     record.updated_at = now_gmt8()
     db.session.commit()
 
@@ -758,12 +765,12 @@ def api_upload_profile_picture():
 
     # Delete old profile picture file if it exists
     if technician.profile_picture:
-        old_path = os.path.join(app.config['UPLOAD_FOLDER'], technician.profile_picture)
+        old_path = os.path.join(UPLOAD_FOLDER, technician.profile_picture)
         if os.path.exists(old_path):
             os.remove(old_path)
 
     filename = secure_filename(f"pfp_{user_id}_{int(__import__('time').time())}.{ext}")
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    file.save(os.path.join(UPLOAD_FOLDER, filename))
 
     technician.profile_picture = filename
     db.session.commit()
@@ -783,7 +790,7 @@ def api_delete_profile_picture():
         return jsonify({'error': 'User not found.'}), 404
 
     if technician.profile_picture:
-        old_path = os.path.join(app.config['UPLOAD_FOLDER'], technician.profile_picture)
+        old_path = os.path.join(UPLOAD_FOLDER, technician.profile_picture)
         if os.path.exists(old_path):
             os.remove(old_path)
         technician.profile_picture = None

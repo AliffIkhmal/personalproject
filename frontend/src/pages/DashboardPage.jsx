@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import StatCard from '../components/ui/StatCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import Modal from '../components/ui/Modal';
+import { getChecklistForType, getChecklistGroups } from '../data/serviceChecklist';
 
 const SERVICE_TYPES = ['Major Service', 'Minor Service'];
 const STATUS_OPTIONS = [
@@ -18,7 +19,7 @@ const STATUS_OPTIONS = [
 const emptyForm = {
   vehicle_name: '', license_plate: '', service_type: 'Major Service',
   status: 'pending', customer_name: '', customer_phone: '',
-  estimated_completion: '', notes: '',
+  estimated_completion: '', notes: '', checklist: [],
 };
 
 export default function DashboardPage() {
@@ -115,7 +116,10 @@ export default function DashboardPage() {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      Object.entries(form).forEach(([k, v]) => formData.append(k, v));
+      Object.entries(form).forEach(([k, v]) => {
+        if (k === 'checklist') formData.append(k, JSON.stringify(v));
+        else formData.append(k, v);
+      });
       imageFiles.forEach((f) => formData.append('images', f));
       await api.upload('/records', formData);
       addToast('Record created!', 'success');
@@ -132,11 +136,14 @@ export default function DashboardPage() {
 
   // Edit record
   const openEdit = (r) => {
+    let checklist = [];
+    try { checklist = r.checklist ? JSON.parse(r.checklist) : []; } catch { checklist = []; }
     setEditForm({
       id: r.id, vehicle_name: r.vehicle_name, license_plate: r.license_plate,
       service_type: r.service_type, status: r.status,
       customer_name: r.customer_name || '', customer_phone: r.customer_phone || '',
       estimated_completion: r.estimated_completion || '', notes: r.notes || '',
+      checklist,
     });
     setEditOpen(true);
   };
@@ -145,8 +152,8 @@ export default function DashboardPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { id, ...body } = editForm;
-      await api.put(`/records/${id}`, body);
+      const { id, checklist, ...rest } = editForm;
+      await api.put(`/records/${id}`, { ...rest, checklist: JSON.stringify(checklist) });
       addToast('Record updated!', 'success');
       setEditOpen(false);
       fetchData();
@@ -377,7 +384,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ====== ADD RECORD MODAL ====== */}
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="New Service Record" subtitle="Enter vehicle and service details.">
+      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="New Service Record" subtitle="Enter vehicle and service details." size={form.checklist.length > 0 ? 'xl' : undefined}>
         <form onSubmit={handleAdd} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -398,13 +405,49 @@ export default function DashboardPage() {
                 <label key={t} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                   form.service_type === t ? 'border-sky-500 bg-sky-50/30 dark:bg-sky-500/10' : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-sky-100 dark:hover:border-sky-500/20 hover:bg-white dark:hover:bg-slate-700'
                 }`}>
-                  <input type="radio" name="stype" className="hidden" checked={form.service_type === t} onChange={() => setForm({ ...form, service_type: t })} />
+                  <input type="radio" name="stype" className="hidden" checked={form.service_type === t} onChange={() => setForm({ ...form, service_type: t, checklist: getChecklistForType(t) })} />
                   <span className={`material-symbols-outlined ${form.service_type === t ? 'text-sky-500' : 'text-slate-400 dark:text-slate-500'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
                   <span className={`text-xs font-bold ${form.service_type === t ? 'text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400'}`}>{t}</span>
                 </label>
               ))}
             </div>
           </div>
+          {/* ---- SERVICE CHECKLIST ---- */}
+          {form.checklist.length > 0 && (() => {
+            const groups = getChecklistGroups(form.checklist);
+            const checked = form.checklist.filter((c) => c.checked).length;
+            const total = form.checklist.length;
+            const pct = Math.round((checked / total) * 100);
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Service Checklist</label>
+                  <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">{checked}/{total} completed</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full indigo-pulse rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                  {Object.entries(groups).map(([cat, items]) => (
+                    <div key={cat} className="col-span-2 sm:col-span-1 space-y-1 mb-2">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{cat}</p>
+                      {items.map((entry, idx) => (
+                        <label key={entry.item} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${entry.checked ? 'bg-sky-50 dark:bg-sky-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                          <input type="checkbox" checked={entry.checked} onChange={() => {
+                            const updated = [...form.checklist];
+                            const i = updated.findIndex((c) => c.item === entry.item);
+                            updated[i] = { ...updated[i], checked: !updated[i].checked };
+                            setForm({ ...form, checklist: updated });
+                          }} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500/30" />
+                          <span className={`text-xs ${entry.checked ? 'text-sky-700 dark:text-sky-300 font-semibold line-through' : 'text-slate-600 dark:text-slate-300'}`}>{entry.item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Status</label>
@@ -454,7 +497,7 @@ export default function DashboardPage() {
       </Modal>
 
       {/* ====== EDIT RECORD MODAL ====== */}
-      <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit Service Record" subtitle="Update vehicle and service details.">
+      <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit Service Record" subtitle="Update vehicle and service details." size={editForm.checklist && editForm.checklist.length > 0 ? 'xl' : undefined}>
         <form onSubmit={handleEdit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -475,13 +518,49 @@ export default function DashboardPage() {
                 <label key={t} className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                   editForm.service_type === t ? 'border-sky-500 bg-sky-50/30 dark:bg-sky-500/10' : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-sky-100 dark:hover:border-sky-500/20 hover:bg-white dark:hover:bg-slate-700'
                 }`}>
-                  <input type="radio" className="hidden" checked={editForm.service_type === t} onChange={() => setEditForm({ ...editForm, service_type: t })} />
+                  <input type="radio" className="hidden" checked={editForm.service_type === t} onChange={() => setEditForm({ ...editForm, service_type: t, checklist: getChecklistForType(t) })} />
                   <span className={`material-symbols-outlined ${editForm.service_type === t ? 'text-sky-500' : 'text-slate-400 dark:text-slate-500'}`}>{t === 'Major Service' ? 'build' : 'settings'}</span>
                   <span className={`text-xs font-bold ${editForm.service_type === t ? 'text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400'}`}>{t}</span>
                 </label>
               ))}
             </div>
           </div>
+          {/* ---- SERVICE CHECKLIST (Edit) ---- */}
+          {editForm.checklist && editForm.checklist.length > 0 && (() => {
+            const groups = getChecklistGroups(editForm.checklist);
+            const checked = editForm.checklist.filter((c) => c.checked).length;
+            const total = editForm.checklist.length;
+            const pct = Math.round((checked / total) * 100);
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Service Checklist</label>
+                  <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">{checked}/{total} completed</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full indigo-pulse rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                  {Object.entries(groups).map(([cat, items]) => (
+                    <div key={cat} className="col-span-2 sm:col-span-1 space-y-1 mb-2">
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{cat}</p>
+                      {items.map((entry) => (
+                        <label key={entry.item} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${entry.checked ? 'bg-sky-50 dark:bg-sky-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                          <input type="checkbox" checked={entry.checked} onChange={() => {
+                            const updated = [...editForm.checklist];
+                            const i = updated.findIndex((c) => c.item === entry.item);
+                            updated[i] = { ...updated[i], checked: !updated[i].checked };
+                            setEditForm({ ...editForm, checklist: updated });
+                          }} className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500/30" />
+                          <span className={`text-xs ${entry.checked ? 'text-sky-700 dark:text-sky-300 font-semibold line-through' : 'text-slate-600 dark:text-slate-300'}`}>{entry.item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Status</label>
