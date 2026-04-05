@@ -122,7 +122,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 py-4 rounded-xl font-headline font-bold text-sm tracking-wide shadow-xl shadow-slate-900/10 dark:shadow-slate-100/10 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group disabled:opacity-60"
+                    className="w-full indigo-pulse text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-60"
                   >
                     <span>{loading ? 'Checking...' : 'Check Status'}</span>
                     {!loading && <span className="material-symbols-outlined text-[18px]">search</span>}

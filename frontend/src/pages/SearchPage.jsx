@@ -89,14 +89,11 @@ export default function SearchPage() {
         <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface mb-4">Vehicle Registry</h2>
         <p className="text-on-surface-variant mb-8 font-medium">Instantly locate technical records and service history.</p>
         <form onSubmit={handleSearch} className="relative group">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-sky-600 text-2xl">search</span>
-          </div>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-14 pr-24 py-5 bg-surface-container-low border-none rounded-xl text-lg font-medium text-on-surface placeholder-outline focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-700 transition-all shadow-sm dark:shadow-slate-950/20"
+            className="w-full pl-6 pr-24 py-5 bg-surface-container-low border-none rounded-xl text-lg font-medium text-on-surface placeholder-outline focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-700 transition-all shadow-sm dark:shadow-slate-950/20"
             placeholder="Search by license plate, vehicle, customer or notes"
           />
           <div className="absolute inset-y-0 right-4 flex items-center gap-2">
@@ -109,8 +106,8 @@ export default function SearchPage() {
               <span className="material-symbols-outlined text-lg">tune</span>
               {hasActiveFilters && <span className="absolute top-2 right-16 w-2 h-2 bg-sky-500 rounded-full" />}
             </button>
-            <button type="submit" className="px-3 py-1 bg-surface-container-high rounded-lg text-[10px] font-bold text-sky-600 uppercase tracking-widest border border-sky-100 dark:border-sky-500/20 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition-colors">
-              Search
+            <button type="submit" className="p-2.5 indigo-pulse rounded-xl text-white shadow-lg shadow-sky-500/20 hover:scale-[1.05] active:scale-[0.95] transition-all">
+              <span className="material-symbols-outlined text-xl">search</span>
             </button>
           </div>
         </form>
