@@ -75,9 +75,13 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
+# Optional on a fresh database: bootstrap the first admin once
+# Windows PowerShell:
+# $env:BOOTSTRAP_ADMIN_USERNAME="admin"
+# $env:BOOTSTRAP_ADMIN_PASSWORD="choose-a-strong-password"
 python app.py
 ```
-The API runs on `http://localhost:5000`. A default technician account (`admin` / `admin123`) is created on first run.
+The API runs on `http://localhost:5000`. A default admin is no longer created automatically. On a fresh database, set `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD` once before first startup, then remove them after the admin account is created.
 
 ### Frontend
 ```sh
@@ -94,10 +98,32 @@ npm run build
 ```
 Flask serves the built React app from `frontend/dist/` automatically.
 
-## Default Login
-| Username | Password |
-|----------|----------|
-| admin    | admin123 |
+## Docker & Render
+
+This repo now includes a Docker-based deployment path for Render.
+
+### Required environment variables
+- `SECRET_KEY` — required in production
+- `DATABASE_URL` — PostgreSQL connection string
+- `UPLOAD_FOLDER` — recommended for persistent uploads, e.g. `/var/data/uploads`
+
+### One-time environment variables for a fresh database
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+
+Set these only for the first deploy to create the initial admin account. Remove them after the admin is created.
+
+### Optional environment variables
+- `ALLOWED_ORIGINS` — comma-separated allowed origins for cross-origin protection
+- `RATELIMIT_STORAGE_URI` — Redis/Valkey URI for shared rate limit storage
+- `HOST` — defaults to `0.0.0.0`
+- `PORT` — defaults to `5000` locally, Render provides this automatically
+
+### Render notes
+- The app exposes `GET /api/health` for Render health checks
+- Attach a persistent disk for uploads or move uploads to object storage
+- Use PostgreSQL in production; SQLite is for local development only
+- Flask serves the built React frontend and the API from the same origin, which keeps cookie auth simple
 
 ## License
 This project is licensed under the MIT License.

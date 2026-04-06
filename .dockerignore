@@ -1,0 +1,17 @@
+.git
+.gitignore
+.vscode
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+instance
+.secret_key
+node_modules
+frontend/node_modules
+frontend/dist
+static/uploads
+stitch
+notes

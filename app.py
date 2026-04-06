@@ -12,21 +12,72 @@ from flask_limiter.util import get_remote_address
 import os
 import math
 import secrets
+import filetype
 from datetime import datetime, timezone, timedelta
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 # GMT+8 timezone
 GMT8 = timezone(timedelta(hours=8))
 
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join('static', 'uploads'))
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+ALLOWED_IMAGE_MIME_TYPES = {
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/bmp',
+    'image/webp',
+}
 VALID_STATUSES = {'pending', 'in_progress', 'completed'}
+SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
+DEV_ALLOWED_ORIGINS = {
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+}
 SECRET_KEY_FILE = '.secret_key'
+RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', '').strip()
+
+
+def is_production():
+    env = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or os.environ.get('PYTHON_ENV') or '').lower()
+    return env == 'production' or bool(os.environ.get('RENDER_EXTERNAL_URL'))
+
+
+def normalize_origin(origin):
+    return origin.rstrip('/')
+
+
+def get_configured_origins():
+    origins = set()
+    configured = os.environ.get('ALLOWED_ORIGINS', '')
+    for origin in configured.split(','):
+        cleaned = origin.strip()
+        if cleaned:
+            origins.add(normalize_origin(cleaned))
+
+    render_origin = os.environ.get('RENDER_EXTERNAL_URL', '').strip()
+    if render_origin:
+        origins.add(normalize_origin(render_origin))
+
+    if not is_production():
+        origins.update(DEV_ALLOWED_ORIGINS)
+
+    return origins
 
 
 def load_or_create_secret_key():
-    """Load secret key from file, or generate a new one."""
+    """Load secret key from env in production, or fall back to a local file for dev."""
+    env_key = os.environ.get('SECRET_KEY', '').strip()
+    if env_key:
+        return env_key
+
+    if is_production():
+        raise RuntimeError('SECRET_KEY environment variable is required in production.')
+
     if os.path.exists(SECRET_KEY_FILE):
         with open(SECRET_KEY_FILE, 'r') as f:
             key = f.read().strip()
@@ -61,6 +112,102 @@ def row_to_dict(row):
     return d
 
 
+def serialize_customer_lookup_record(record):
+    return {
+        'vehicle_name': record.vehicle_name,
+        'license_plate': record.license_plate,
+        'service_type': record.service_type,
+        'status': record.status,
+        'estimated_completion': record.estimated_completion,
+        'updated_at': record.updated_at,
+    }
+
+
+def serialize_customer_history_record(record):
+    return {
+        'id': record.id,
+        'vehicle_name': record.vehicle_name,
+        'license_plate': record.license_plate,
+        'service_type': record.service_type,
+        'status': record.status,
+        'created_at': record.created_at,
+    }
+
+
+def get_allowed_request_origins():
+    origins = get_configured_origins()
+    origins.add(normalize_origin(request.host_url))
+    return origins
+
+
+def is_allowed_request_source(source, allowed_origins):
+    if not source:
+        return False
+    normalized = normalize_origin(source)
+    if normalized in allowed_origins:
+        return True
+    return any(source.startswith(f'{origin}/') for origin in allowed_origins)
+
+
+def validate_request_source():
+    if request.method in SAFE_METHODS or not request.path.startswith('/api/'):
+        return None
+
+    allowed_origins = get_allowed_request_origins()
+    origin = request.headers.get('Origin', '').strip()
+    referer = request.headers.get('Referer', '').strip()
+
+    if origin and is_allowed_request_source(origin, allowed_origins):
+        return None
+    if referer and is_allowed_request_source(referer, allowed_origins):
+        return None
+    if not origin and not referer and not is_production():
+        return None
+
+    return jsonify({'error': 'Cross-origin request blocked.'}), 403
+
+
+def validate_uploaded_image(file):
+    if file is None or file.filename == '':
+        return False, 'No file selected.'
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        return False, f'Invalid file type. Allowed: {", ".join(sorted(ALLOWED_EXTENSIONS))}'
+
+    if file.mimetype and not file.mimetype.startswith('image/'):
+        return False, 'Invalid image content type.'
+
+    try:
+        file.stream.seek(0)
+        signature = file.stream.read(261)
+        file.stream.seek(0)
+        detected = filetype.guess(signature)
+    except Exception:
+        try:
+            file.stream.seek(0)
+        except Exception:
+            pass
+        return False, 'Invalid image file.'
+
+    if detected is None or detected.mime not in ALLOWED_IMAGE_MIME_TYPES or detected.extension not in ALLOWED_EXTENSIONS:
+        return False, 'Invalid image file.'
+
+    return True, ext
+
+
+def validate_image_batch(files):
+    validated = []
+    for file in files:
+        if not file or not file.filename:
+            continue
+        is_valid, result = validate_uploaded_image(file)
+        if not is_valid:
+            return False, result
+        validated.append((file, result))
+    return True, validated
+
+
 def require_auth():
     """Return user_id from session, or None if not logged in."""
     if 'user_id' not in session:
@@ -82,10 +229,12 @@ def require_admin():
 
 # Create the Flask app — serve React build in production
 app = Flask(__name__, static_folder=None)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = load_or_create_secret_key()
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = is_production()
 
 # --- Database Configuration ---
 # Use DATABASE_URL env var for PostgreSQL, fallback to SQLite for local dev
@@ -100,14 +249,22 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # --- Flask-SocketIO for real-time updates ---
-socketio = SocketIO(app, cors_allowed_origins='*')
+SOCKET_ALLOWED_ORIGINS = sorted(get_configured_origins())
+socketio = SocketIO(app, cors_allowed_origins=SOCKET_ALLOWED_ORIGINS or None)
 
 # --- Flask-Limiter for basic DDoS protection ---
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["200 per day", "50 per hour"]
-)
+limiter_options = {
+    'default_limits': ["200 per day", "50 per hour"],
+}
+if RATELIMIT_STORAGE_URI:
+    limiter_options['storage_uri'] = RATELIMIT_STORAGE_URI
+
+limiter = Limiter(get_remote_address, app=app, **limiter_options)
+
+
+@app.before_request
+def enforce_request_source():
+    return validate_request_source()
 
 
 # ------------------------------------------
@@ -200,21 +357,35 @@ def emit_update(event='records_updated', data=None):
     socketio.emit(event, data or {}, namespace='/')
 
 
-def add_default_technician():
-    """Add a default admin account if the database is empty."""
+def bootstrap_admin_from_env():
+    """Create the first admin only when explicit bootstrap credentials are provided."""
+    username = os.environ.get('BOOTSTRAP_ADMIN_USERNAME', '').strip()
+    password = os.environ.get('BOOTSTRAP_ADMIN_PASSWORD', '')
+
     try:
-        if Technician.query.first() is None:
-            tech = Technician(username='admin', password=generate_password_hash('admin123'), role='admin', created_at=now_gmt8())
-            db.session.add(tech)
-            db.session.commit()
-            print('Default admin created: admin / admin123')
+        if Technician.query.first() is not None or not username or not password:
+            return
+
+        if len(password) < 12:
+            raise RuntimeError('BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters long.')
+
+        tech = Technician(username=username, password=generate_password_hash(password), role='admin', created_at=now_gmt8())
+        db.session.add(tech)
+        db.session.commit()
+        print(f'Bootstrapped admin account from environment: {username}')
     except Exception:
         db.session.rollback()
+        raise
 
 
 # ------------------------------------------
 # ROUTES — JSON API
 # ------------------------------------------
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    return jsonify({'status': 'ok'})
+
 
 @app.route('/api/auth/check', methods=['GET'])
 def auth_check():
@@ -246,6 +417,7 @@ def api_login():
 
 
 @app.route('/api/customer-lookup', methods=['POST'])
+@limiter.limit("10 per minute")
 def api_customer_lookup():
     data = safe_get_json()
     license_plate = data.get('license_plate', '').strip().upper()
@@ -256,7 +428,7 @@ def api_customer_lookup():
     record = ServiceRecord.query.filter_by(license_plate=license_plate).order_by(ServiceRecord.created_at.desc()).first()
 
     if record:
-        return jsonify({'record': row_to_dict(record)})
+        return jsonify({'record': serialize_customer_lookup_record(record)})
     return jsonify({'error': f'No records found for plate "{license_plate}".'}), 404
 
 
@@ -349,24 +521,29 @@ def api_add_record():
         image_file = None
         image_files = []
 
+    if not vehicle_name or not license_plate or not service_type:
+        return jsonify({'error': 'Vehicle name, license plate, and service type are required.'}), 400
+
     # Validate status
     if status not in VALID_STATUSES:
         return jsonify({'error': f'Invalid status. Must be one of: {VALID_STATUSES}'}), 400
 
-    # Handle image upload
+    all_files = list(image_files) if image_files else []
+    if image_file and image_file.filename:
+        all_files.insert(0, image_file)
+
+    is_valid_batch, validated_files_or_error = validate_image_batch(all_files)
+    if not is_valid_batch:
+        return jsonify({'error': validated_files_or_error}), 400
+
+    validated_files = validated_files_or_error
+
     image_filename = None
     if image_file and image_file.filename:
-        ext = image_file.filename.rsplit('.', 1)[-1].lower()
-        if ext in ALLOWED_EXTENSIONS:
-            filename = secure_filename(f"{license_plate}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}")
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            image_file.save(os.path.join(UPLOAD_FOLDER, filename))
-            image_filename = filename
-        else:
-            return jsonify({'error': 'Invalid image file type.'}), 400
-
-    if not vehicle_name or not license_plate or not service_type:
-        return jsonify({'error': 'Vehicle name, license plate, and service type are required.'}), 400
+        primary_ext = validated_files[0][1]
+        image_filename = secure_filename(f"{license_plate}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{primary_ext}")
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        image_file.save(os.path.join(UPLOAD_FOLDER, image_filename))
 
     timestamp = now_gmt8()
     record = ServiceRecord(
@@ -388,16 +565,8 @@ def api_add_record():
     db.session.flush()  # get record.id
 
     # Save multiple images into service_images table
-    all_files = list(image_files) if image_files else []
-    if image_file and image_file.filename:
-        all_files.insert(0, image_file)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    for f in all_files:
-        if not f.filename:
-            continue
-        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-        if ext not in ALLOWED_EXTENSIONS:
-            continue
+    for f, ext in validated_files:
         safe_name = secure_filename(f"{license_plate}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{ext}")
         f.save(os.path.join(UPLOAD_FOLDER, safe_name))
         img = ServiceImage(record_id=record.id, filename=safe_name, original_name=f.filename, uploaded_at=timestamp)
@@ -479,16 +648,15 @@ def api_upload_images(record_id):
     if not files or all(f.filename == '' for f in files):
         return jsonify({'error': 'No images provided.'}), 400
 
+    is_valid_batch, validated_files_or_error = validate_image_batch(files)
+    if not is_valid_batch:
+        return jsonify({'error': validated_files_or_error}), 400
+
     saved = []
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     timestamp = now_gmt8()
 
-    for f in files:
-        if not f.filename:
-            continue
-        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-        if ext not in ALLOWED_EXTENSIONS:
-            continue
+    for f, ext in validated_files_or_error:
         safe_name = secure_filename(f"{record.license_plate}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.{ext}")
         f.save(os.path.join(UPLOAD_FOLDER, safe_name))
         img = ServiceImage(record_id=record_id, filename=safe_name, original_name=f.filename, uploaded_at=timestamp)
@@ -752,12 +920,11 @@ def api_upload_profile_picture():
         return jsonify({'error': 'No image provided.'}), 400
 
     file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected.'}), 400
+    is_valid_file, validated_ext_or_error = validate_uploaded_image(file)
+    if not is_valid_file:
+        return jsonify({'error': validated_ext_or_error}), 400
 
-    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-    if ext not in ALLOWED_EXTENSIONS:
-        return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+    ext = validated_ext_or_error
 
     technician = Technician.query.get(user_id)
     if not technician:
@@ -770,6 +937,7 @@ def api_upload_profile_picture():
             os.remove(old_path)
 
     filename = secure_filename(f"pfp_{user_id}_{int(__import__('time').time())}.{ext}")
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(os.path.join(UPLOAD_FOLDER, filename))
 
     technician.profile_picture = filename
@@ -973,8 +1141,11 @@ def api_get_customer(customer_id):
 
     customer_dict = row_to_dict(customer)
     # Attach service records linked to this customer
-    records = ServiceRecord.query.filter_by(customer_id=customer_id).order_by(ServiceRecord.updated_at.desc()).all()
-    customer_dict['records'] = [row_to_dict(r) for r in records]
+    records_query = ServiceRecord.query.filter_by(customer_id=customer_id)
+    if not is_admin():
+        records_query = records_query.filter_by(technician_id=user_id)
+    records = records_query.order_by(ServiceRecord.updated_at.desc()).all()
+    customer_dict['records'] = [serialize_customer_history_record(r) for r in records]
 
     return jsonify({'customer': customer_dict})
 
@@ -1034,7 +1205,34 @@ def api_delete_customer(customer_id):
 # ------------------------------------------
 @app.route('/static/uploads/<path:filename>')
 def serve_upload(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    safe_filename = secure_filename(filename)
+    if safe_filename != filename:
+        return jsonify({'error': 'Not found.'}), 404
+
+    image = ServiceImage.query.filter_by(filename=filename).first()
+    if image:
+        record = ServiceRecord.query.get(image.record_id)
+        if record is None or (not is_admin() and record.technician_id != user_id):
+            return jsonify({'error': 'Not found.'}), 404
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
+    legacy_image = ServiceRecord.query.filter_by(image_filename=filename).first()
+    if legacy_image:
+        if not is_admin() and legacy_image.technician_id != user_id:
+            return jsonify({'error': 'Not found.'}), 404
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
+    profile_picture_owner = Technician.query.filter_by(profile_picture=filename).first()
+    if profile_picture_owner:
+        if not is_admin() and profile_picture_owner.id != user_id:
+            return jsonify({'error': 'Not found.'}), 404
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
+    return jsonify({'error': 'Not found.'}), 404
 
 
 # ------------------------------------------
@@ -1076,11 +1274,15 @@ def internal_server_error(e):
 # ------------------------------------------
 # START THE APP
 # ------------------------------------------
-# Create tables and default technician when the app starts
-with app.app_context():
-    db.create_all()
-    add_default_technician()
+def initialize_runtime_state():
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    with app.app_context():
+        db.create_all()
+        bootstrap_admin_from_env()
 
 # Run the app
 if __name__ == '__main__':
-    socketio.run(app, debug=False)
+    initialize_runtime_state()
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', '5000'))
+    socketio.run(app, host=host, port=port, debug=False)
