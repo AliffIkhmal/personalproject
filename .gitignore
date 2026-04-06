@@ -4,5 +4,6 @@ __pycache__/
 instance/
 .secret_key
 *.db
+static/uploads/
 node_modules/
 frontend/dist/
