@@ -1416,6 +1416,43 @@ def send_telegram_message(chat_id, text):
 
 
 # ------------------------------------------
+# TELEGRAM BOT LISTENER (auto-reply chat ID)
+# ------------------------------------------
+import threading
+
+def telegram_bot_listener():
+    """Background thread that polls Telegram for new messages and replies with the chat ID."""
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates'
+    offset = None
+    while True:
+        try:
+            params = {'timeout': 30, 'allowed_updates': ['message']}
+            if offset is not None:
+                params['offset'] = offset
+            resp = http_requests.get(url, params=params, timeout=35)
+            data = resp.json()
+            for update in data.get('result', []):
+                offset = update['update_id'] + 1
+                msg = update.get('message')
+                if not msg:
+                    continue
+                chat_id = msg['chat']['id']
+                first_name = msg['chat'].get('first_name', '')
+                reply = (
+                    f"👋 Hi {first_name}!\n\n"
+                    f"🔑 <b>Your Chat ID is:</b> <code>{chat_id}</code>\n\n"
+                    f"Please share this Chat ID with the workshop admin "
+                    f"so they can send you service reminders."
+                )
+                send_telegram_message(chat_id, reply)
+        except Exception:
+            import time
+            time.sleep(5)
+
+
+# ------------------------------------------
 # REMINDERS API
 # ------------------------------------------
 @app.route('/api/reminders', methods=['GET'])
@@ -1782,6 +1819,11 @@ def initialize_runtime_state():
 # Run the app
 if __name__ == '__main__':
     initialize_runtime_state()
+    # Start Telegram bot listener in background
+    if TELEGRAM_BOT_TOKEN:
+        bot_thread = threading.Thread(target=telegram_bot_listener, daemon=True)
+        bot_thread.start()
+        print(f' * Telegram bot listener started')
     host = os.environ.get('HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', '5000'))
     socketio.run(app, host=host, port=port, debug=False)
