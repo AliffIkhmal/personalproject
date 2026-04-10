@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState('');
   const [createdAt, setCreatedAt] = useState('');
   const [recordsCount, setRecordsCount] = useState(0);
+  const [relativeTime, setRelativeTime] = useState('');
   const { addToast } = useToast();
   const { user, updateUser } = useAuth();
   const fileRef = useRef(null);
@@ -23,6 +24,21 @@ export default function ProfilePage() {
       setPhone(data.phone || '');
       setCreatedAt(data.created_at || '');
       setRecordsCount(data.records_count || 0);
+      if (data.created_at) {
+        const diff = Date.now() - new Date(data.created_at).getTime();
+        const days = Math.floor(diff / 86400000);
+        if (days < 1) setRelativeTime('Today');
+        else if (days === 1) setRelativeTime('1 day ago');
+        else if (days < 30) setRelativeTime(`${days} days ago`);
+        else {
+          const months = Math.floor(days / 30.44);
+          const years = Math.floor(months / 12);
+          const remMonths = months % 12;
+          if (years < 1) setRelativeTime(months === 1 ? '1 month ago' : `${months} months ago`);
+          else if (remMonths === 0) setRelativeTime(years === 1 ? '1 year ago' : `${years} years ago`);
+          else setRelativeTime(`${years}y ${remMonths}m ago`);
+        }
+      }
     }).catch(() => {});
   }, []);
 
@@ -194,6 +210,7 @@ export default function ProfilePage() {
                     <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant/60">Member Since</p>
                   </div>
                   <p className="text-sm font-bold text-on-surface">{createdAt ? new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</p>
+                  {relativeTime && <p className="text-[11px] text-on-surface-variant/60 mt-0.5">{relativeTime}</p>}
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-700/40 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-1">

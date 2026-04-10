@@ -13,7 +13,7 @@ export default function CustomerDetailPage() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', telegram_chat_id: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const fetchCustomer = useCallback(async () => {
@@ -26,6 +26,7 @@ export default function CustomerDetailPage() {
         phone: data.customer.phone || '',
         email: data.customer.email || '',
         address: data.customer.address || '',
+        telegram_chat_id: data.customer.telegram_chat_id || '',
       });
     } catch {
       addToast('Customer not found.', 'error');
@@ -122,6 +123,11 @@ export default function CustomerDetailPage() {
               <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2}
                 className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none" />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Telegram Chat ID</label>
+              <input value={form.telegram_chat_id} onChange={(e) => setForm({ ...form, telegram_chat_id: e.target.value })}
+                className="w-full bg-surface-container-low border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-sky-500/20 outline-none font-semibold" placeholder="e.g. 123456789" />
+            </div>
             <div className="flex justify-end">
               <button type="submit" disabled={submitting}
                 className="px-6 py-2.5 indigo-pulse text-white rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-60">
@@ -142,6 +148,10 @@ export default function CustomerDetailPage() {
             <div className="col-span-2">
               <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Address</p>
               <p className="text-sm font-semibold text-on-surface">{customer.address || '—'}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Telegram Chat ID</p>
+              <p className="text-sm font-semibold text-on-surface">{customer.telegram_chat_id || '—'}</p>
             </div>
           </div>
         )}

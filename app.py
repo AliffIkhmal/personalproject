@@ -13,6 +13,7 @@ import os
 import math
 import secrets
 import filetype
+import requests as http_requests
 from datetime import datetime, timezone, timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -31,6 +32,8 @@ ALLOWED_IMAGE_MIME_TYPES = {
     'image/webp',
 }
 VALID_STATUSES = {'pending', 'in_progress', 'completed'}
+VALID_APPOINTMENT_STATUSES = {'requested', 'confirmed', 'completed', 'cancelled'}
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
 DEV_ALLOWED_ORIGINS = {
     'http://localhost:5000',
@@ -131,6 +134,7 @@ def serialize_customer_history_record(record):
         'service_type': record.service_type,
         'status': record.status,
         'created_at': record.created_at,
+        'next_service_date': record.next_service_date,
     }
 
 
@@ -303,6 +307,8 @@ class ServiceRecord(db.Model):
     image_filename = db.Column(db.String(200))
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
     checklist = db.Column(db.Text, nullable=True)  # JSON: [{"item": "...", "checked": true/false}, ...]
+    next_service_date = db.Column(db.String(30), nullable=True)
+    last_reminder_sent = db.Column(db.String(30), nullable=True)
     images = db.relationship('ServiceImage', backref='record', lazy=True, cascade='all, delete-orphan')
 
 class ServiceImage(db.Model):
@@ -332,9 +338,27 @@ class Customer(db.Model):
     phone = db.Column(db.String(30))
     email = db.Column(db.String(120))
     address = db.Column(db.Text)
+    telegram_chat_id = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.String(30))
     updated_at = db.Column(db.String(30))
     records = db.relationship('ServiceRecord', backref='customer', lazy=True)
+
+
+class Appointment(db.Model):
+    __tablename__ = 'appointments'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=False)
+    service_record_id = db.Column(db.Integer, db.ForeignKey('service_records.id'), nullable=True)
+    appointment_date = db.Column(db.String(30), nullable=False)
+    appointment_time = db.Column(db.String(10), nullable=True)
+    service_type = db.Column(db.String(50))
+    vehicle_name = db.Column(db.String(120))
+    license_plate = db.Column(db.String(20))
+    status = db.Column(db.String(20), default='requested')  # requested, confirmed, completed, cancelled
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.String(30))
+    updated_at = db.Column(db.String(30))
+    customer = db.relationship('Customer', backref='appointments')
 
 
 def log_audit(action, entity_type=None, entity_id=None, description=None, user_id=None, username=None):
@@ -505,6 +529,8 @@ def api_add_record():
         estimated_completion = request.form.get('estimated_completion', '').strip()
         notes = request.form.get('notes', '').strip()
         checklist = request.form.get('checklist', '').strip() or None
+        next_service_date = request.form.get('next_service_date', '').strip() or None
+        assign_technician_id = request.form.get('technician_id', '').strip()
         image_file = request.files.get('image')
         image_files = request.files.getlist('images')
     else:
@@ -518,6 +544,8 @@ def api_add_record():
         estimated_completion = data.get('estimated_completion', '').strip()
         notes = data.get('notes', '').strip()
         checklist = data.get('checklist', '').strip() if isinstance(data.get('checklist'), str) else None
+        next_service_date = data.get('next_service_date', '').strip() if isinstance(data.get('next_service_date'), str) else None
+        assign_technician_id = str(data.get('technician_id', '')).strip()
         image_file = None
         image_files = []
 
@@ -545,6 +573,16 @@ def api_add_record():
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         image_file.save(os.path.join(UPLOAD_FOLDER, image_filename))
 
+    # Admin can assign record to another technician
+    owner_id = user_id
+    if is_admin() and assign_technician_id:
+        try:
+            target_id = int(assign_technician_id)
+            if Technician.query.get(target_id):
+                owner_id = target_id
+        except (ValueError, TypeError):
+            pass
+
     timestamp = now_gmt8()
     record = ServiceRecord(
         vehicle_name=vehicle_name,
@@ -555,11 +593,12 @@ def api_add_record():
         customer_phone=customer_phone,
         notes=notes,
         estimated_completion=estimated_completion,
-        technician_id=user_id,
+        technician_id=owner_id,
         created_at=timestamp,
         updated_at=timestamp,
         image_filename=image_filename,
         checklist=checklist,
+        next_service_date=next_service_date,
     )
     db.session.add(record)
     db.session.flush()  # get record.id
@@ -622,9 +661,11 @@ def api_view_record(record_id):
         return jsonify({'error': 'Record not found.'}), 404
 
     record_dict = row_to_dict(record)
-    # Add technician name
+    # Add technician name and profile picture
     tech = Technician.query.get(record.technician_id)
     record_dict['technician_name'] = tech.username if tech else None
+    record_dict['technician_display_name'] = tech.display_name if tech else None
+    record_dict['technician_profile_picture'] = tech.profile_picture if tech else None
 
     # Attach images for this record
     images = ServiceImage.query.filter_by(record_id=record_id).order_by(ServiceImage.uploaded_at.asc()).all()
@@ -805,6 +846,9 @@ def api_edit_record(record_id):
     checklist = data.get('checklist')
     if checklist is not None:
         record.checklist = checklist if isinstance(checklist, str) else None
+    next_service_date = data.get('next_service_date')
+    if next_service_date is not None:
+        record.next_service_date = next_service_date.strip() if isinstance(next_service_date, str) else None
     record.updated_at = now_gmt8()
     db.session.commit()
 
@@ -878,6 +922,158 @@ def api_register():
 
     log_audit('register', 'technician', tech.id, f'Registered new {role} "{username}".')
     return jsonify({'success': True}), 201
+
+
+# ------------------------------------------
+# TECHNICIAN MANAGEMENT (Admin only)
+# ------------------------------------------
+
+@app.route('/api/technicians', methods=['GET'])
+def api_list_technicians():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(max(per_page, 1), 100)
+    page = max(page, 1)
+    offset = (page - 1) * per_page
+    q = request.args.get('q', '').strip()
+
+    base = Technician.query
+    if q:
+        search_term = f'%{q}%'
+        base = base.filter(db.or_(
+            Technician.username.ilike(search_term),
+            Technician.display_name.ilike(search_term),
+            Technician.email.ilike(search_term),
+        ))
+
+    total = base.count()
+    technicians = base.order_by(Technician.id.asc()).offset(offset).limit(per_page).all()
+    total_pages = math.ceil(total / per_page) if per_page and total else 1
+
+    result = []
+    for t in technicians:
+        records_count = ServiceRecord.query.filter_by(technician_id=t.id).count()
+        result.append({
+            'id': t.id,
+            'username': t.username,
+            'role': t.role,
+            'display_name': t.display_name,
+            'email': t.email,
+            'phone': t.phone,
+            'profile_picture': t.profile_picture,
+            'created_at': t.created_at,
+            'records_count': records_count,
+        })
+
+    return jsonify({
+        'technicians': result,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'total_pages': total_pages,
+        }
+    })
+
+
+@app.route('/api/technicians/<int:tech_id>/role', methods=['PATCH'])
+def api_update_technician_role(tech_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    if tech_id == user_id:
+        return jsonify({'error': 'You cannot change your own role.'}), 400
+
+    data = safe_get_json()
+    new_role = data.get('role', '').strip()
+    if new_role not in VALID_ROLES:
+        return jsonify({'error': f'Invalid role. Must be one of: {VALID_ROLES}'}), 400
+
+    tech = Technician.query.get(tech_id)
+    if tech is None:
+        return jsonify({'error': 'Technician not found.'}), 404
+
+    old_role = tech.role
+    tech.role = new_role
+    db.session.commit()
+
+    log_audit('role_change', 'technician', tech_id,
+              f'Changed role of "{tech.username}" from "{old_role}" to "{new_role}".')
+    return jsonify({'success': True})
+
+
+@app.route('/api/technicians/<int:tech_id>/reset-password', methods=['POST'])
+def api_admin_reset_password(tech_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    data = safe_get_json()
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
+
+    if not new_password:
+        return jsonify({'error': 'New password is required.'}), 400
+    if len(new_password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+    if new_password != confirm_password:
+        return jsonify({'error': 'Passwords do not match.'}), 400
+
+    tech = Technician.query.get(tech_id)
+    if tech is None:
+        return jsonify({'error': 'Technician not found.'}), 404
+
+    tech.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    log_audit('password_reset', 'technician', tech_id,
+              f'Admin reset password for "{tech.username}".')
+    return jsonify({'success': True})
+
+
+@app.route('/api/technicians/<int:tech_id>', methods=['DELETE'])
+def api_delete_technician(tech_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    if tech_id == user_id:
+        return jsonify({'error': 'You cannot delete your own account.'}), 400
+
+    tech = Technician.query.get(tech_id)
+    if tech is None:
+        return jsonify({'error': 'Technician not found.'}), 404
+
+    # Reassign their records to the admin (current user) instead of deleting
+    ServiceRecord.query.filter_by(technician_id=tech_id).update({'technician_id': user_id})
+
+    desc = f'Deleted technician "{tech.username}" (ID #{tech_id}). Records reassigned.'
+    db.session.delete(tech)
+    db.session.commit()
+
+    log_audit('delete', 'technician', tech_id, desc)
+    return jsonify({'success': True})
 
 
 @app.route('/api/change-password', methods=['POST'])
@@ -1169,6 +1365,7 @@ def api_update_customer(customer_id):
     customer.phone = data.get('phone', '').strip()
     customer.email = data.get('email', '').strip()
     customer.address = data.get('address', '').strip()
+    customer.telegram_chat_id = data.get('telegram_chat_id', '').strip() or None
     customer.updated_at = now_gmt8()
     db.session.commit()
 
@@ -1201,6 +1398,310 @@ def api_delete_customer(customer_id):
 
 
 # ------------------------------------------
+# TELEGRAM HELPER
+# ------------------------------------------
+def send_telegram_message(chat_id, text):
+    """Send a message via Telegram Bot API. Returns (success, error_msg)."""
+    if not TELEGRAM_BOT_TOKEN:
+        return False, 'Telegram bot token not configured. Set TELEGRAM_BOT_TOKEN env variable.'
+    url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
+    try:
+        resp = http_requests.post(url, json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}, timeout=10)
+        data = resp.json()
+        if data.get('ok'):
+            return True, None
+        return False, data.get('description', 'Unknown Telegram error.')
+    except Exception as e:
+        return False, str(e)
+
+
+# ------------------------------------------
+# REMINDERS API
+# ------------------------------------------
+@app.route('/api/reminders', methods=['GET'])
+def api_get_reminders():
+    """Get service records for reminders (admin only). Use ?all=1 to include records without next_service_date."""
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    show_all = request.args.get('all', '').strip() == '1'
+    if show_all:
+        records = ServiceRecord.query.order_by(ServiceRecord.updated_at.desc()).all()
+    else:
+        records = ServiceRecord.query.filter(
+            ServiceRecord.next_service_date.isnot(None),
+            ServiceRecord.next_service_date != ''
+        ).order_by(ServiceRecord.next_service_date.asc()).all()
+
+    results = []
+    for r in records:
+        customer = Customer.query.get(r.customer_id) if r.customer_id else None
+        if not customer and r.customer_name:
+            customer = Customer.query.filter(Customer.name.ilike(r.customer_name)).first()
+        results.append({
+            'id': r.id,
+            'vehicle_name': r.vehicle_name,
+            'license_plate': r.license_plate,
+            'service_type': r.service_type,
+            'status': r.status,
+            'next_service_date': r.next_service_date,
+            'last_reminder_sent': r.last_reminder_sent,
+            'customer_id': r.customer_id,
+            'customer_name': customer.name if customer else (r.customer_name or '—'),
+            'customer_phone': customer.phone if customer else (r.customer_phone or ''),
+            'telegram_chat_id': customer.telegram_chat_id if customer else None,
+        })
+
+    return jsonify({'reminders': results})
+
+
+@app.route('/api/reminders/<int:record_id>/date', methods=['PATCH'])
+def api_set_next_service_date(record_id):
+    """Quick-set next_service_date on a record (admin only)."""
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    record = ServiceRecord.query.get(record_id)
+    if not record:
+        return jsonify({'error': 'Record not found.'}), 404
+
+    data = safe_get_json()
+    record.next_service_date = data.get('next_service_date', '').strip() or None
+    record.updated_at = now_gmt8()
+    db.session.commit()
+    return jsonify({'success': True, 'next_service_date': record.next_service_date})
+
+
+@app.route('/api/reminders/<int:record_id>/send', methods=['POST'])
+def api_send_reminder(record_id):
+    """Send a Telegram reminder for a service record (admin only)."""
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    record = ServiceRecord.query.get(record_id)
+    if not record:
+        return jsonify({'error': 'Record not found.'}), 404
+    if not record.next_service_date:
+        return jsonify({'error': 'No next service date set for this record.'}), 400
+
+    customer = Customer.query.get(record.customer_id) if record.customer_id else None
+    if not customer and record.customer_name:
+        customer = Customer.query.filter(Customer.name.ilike(record.customer_name)).first()
+    chat_id = customer.telegram_chat_id if customer else None
+    if not chat_id:
+        return jsonify({'error': 'Customer has no Telegram Chat ID linked. Update it in customer details.'}), 400
+
+    customer_name = customer.name if customer else (record.customer_name or 'Customer')
+    message = (
+        f"🔧 <b>Service Reminder</b>\n\n"
+        f"Hi {customer_name}, your <b>{record.vehicle_name}</b> "
+        f"(<b>{record.license_plate}</b>) is due for its next service "
+        f"on <b>{record.next_service_date}</b>.\n\n"
+        f"Please contact us to schedule an appointment. Thank you!"
+    )
+
+    success, error = send_telegram_message(chat_id, message)
+    if not success:
+        return jsonify({'error': f'Failed to send: {error}'}), 500
+
+    record.last_reminder_sent = now_gmt8()
+    db.session.commit()
+    log_audit('reminder', 'record', record_id, f'Sent Telegram reminder for {record.vehicle_name} ({record.license_plate}) to {customer_name}.')
+    return jsonify({'success': True, 'last_reminder_sent': record.last_reminder_sent})
+
+
+# ------------------------------------------
+# APPOINTMENTS API
+# ------------------------------------------
+@app.route('/api/appointments', methods=['GET'])
+def api_get_appointments():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    status_filter = request.args.get('status', '').strip()
+    query = Appointment.query
+    if status_filter and status_filter in VALID_APPOINTMENT_STATUSES:
+        query = query.filter_by(status=status_filter)
+    appointments = query.order_by(Appointment.appointment_date.asc()).all()
+
+    results = []
+    for a in appointments:
+        d = row_to_dict(a)
+        customer = Customer.query.get(a.customer_id)
+        d['customer_name'] = customer.name if customer else '—'
+        d['customer_phone'] = customer.phone if customer else ''
+        d['telegram_chat_id'] = customer.telegram_chat_id if customer else None
+        results.append(d)
+
+    return jsonify({'appointments': results})
+
+
+@app.route('/api/appointments', methods=['POST'])
+def api_create_appointment():
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    data = safe_get_json()
+    customer_id = data.get('customer_id')
+    appointment_date = data.get('appointment_date', '').strip()
+    if not customer_id or not appointment_date:
+        return jsonify({'error': 'Customer and appointment date are required.'}), 400
+
+    customer = Customer.query.get(customer_id)
+    if not customer:
+        return jsonify({'error': 'Customer not found.'}), 404
+
+    timestamp = now_gmt8()
+    appointment = Appointment(
+        customer_id=customer_id,
+        service_record_id=data.get('service_record_id') or None,
+        appointment_date=appointment_date,
+        appointment_time=data.get('appointment_time', '').strip() or None,
+        service_type=data.get('service_type', '').strip() or None,
+        vehicle_name=data.get('vehicle_name', '').strip() or None,
+        license_plate=data.get('license_plate', '').strip().upper() or None,
+        status='requested',
+        notes=data.get('notes', '').strip() or None,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    db.session.add(appointment)
+    db.session.commit()
+
+    log_audit('create', 'appointment', appointment.id, f'Created appointment for {customer.name} on {appointment_date}.')
+    return jsonify({'success': True, 'appointment': row_to_dict(appointment)}), 201
+
+
+@app.route('/api/appointments/<int:appointment_id>', methods=['PUT'])
+def api_update_appointment(appointment_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found.'}), 404
+
+    data = safe_get_json()
+    new_status = data.get('status', '').strip()
+    if new_status:
+        if new_status not in VALID_APPOINTMENT_STATUSES:
+            return jsonify({'error': f'Invalid status. Must be one of: {list(VALID_APPOINTMENT_STATUSES)}'}), 400
+        appointment.status = new_status
+
+    if 'appointment_date' in data:
+        appointment.appointment_date = data['appointment_date'].strip()
+    if 'appointment_time' in data:
+        appointment.appointment_time = data['appointment_time'].strip() or None
+    if 'service_type' in data:
+        appointment.service_type = data['service_type'].strip() or None
+    if 'vehicle_name' in data:
+        appointment.vehicle_name = data['vehicle_name'].strip() or None
+    if 'license_plate' in data:
+        appointment.license_plate = data['license_plate'].strip().upper() or None
+    if 'notes' in data:
+        appointment.notes = data['notes'].strip() or None
+
+    appointment.updated_at = now_gmt8()
+    db.session.commit()
+
+    log_audit('update', 'appointment', appointment_id, f'Updated appointment #{appointment_id} (status: {appointment.status}).')
+    return jsonify({'success': True, 'appointment': row_to_dict(appointment)})
+
+
+@app.route('/api/appointments/<int:appointment_id>', methods=['DELETE'])
+def api_delete_appointment(appointment_id):
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found.'}), 404
+
+    db.session.delete(appointment)
+    db.session.commit()
+
+    log_audit('delete', 'appointment', appointment_id, f'Deleted appointment #{appointment_id}.')
+    return jsonify({'success': True})
+
+
+@app.route('/api/appointments/<int:appointment_id>/notify', methods=['POST'])
+def api_notify_appointment(appointment_id):
+    """Send Telegram notification about appointment status to customer."""
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'error': 'Authentication required.'}), 401
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    appointment = Appointment.query.get(appointment_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found.'}), 404
+
+    customer = Customer.query.get(appointment.customer_id)
+    if not customer or not customer.telegram_chat_id:
+        return jsonify({'error': 'Customer has no Telegram Chat ID linked.'}), 400
+
+    status_labels = {
+        'requested': 'has been received',
+        'confirmed': 'has been confirmed ✅',
+        'completed': 'has been marked as completed ✅',
+        'cancelled': 'has been cancelled ❌',
+    }
+    status_text = status_labels.get(appointment.status, appointment.status)
+    time_text = f" at {appointment.appointment_time}" if appointment.appointment_time else ""
+
+    message = (
+        f"📅 <b>Appointment Update</b>\n\n"
+        f"Hi {customer.name}, your appointment on "
+        f"<b>{appointment.appointment_date}</b>{time_text} "
+        f"{status_text}.\n\n"
+    )
+    if appointment.vehicle_name:
+        message += f"Vehicle: {appointment.vehicle_name}"
+        if appointment.license_plate:
+            message += f" ({appointment.license_plate})"
+        message += "\n"
+    if appointment.notes:
+        message += f"Notes: {appointment.notes}\n"
+    message += "\nThank you!"
+
+    success, error = send_telegram_message(customer.telegram_chat_id, message)
+    if not success:
+        return jsonify({'error': f'Failed to send: {error}'}), 500
+
+    return jsonify({'success': True})
+
+
+# ------------------------------------------
 # SERVE UPLOADED IMAGES
 # ------------------------------------------
 @app.route('/static/uploads/<path:filename>')
@@ -1228,8 +1729,6 @@ def serve_upload(filename):
 
     profile_picture_owner = Technician.query.filter_by(profile_picture=filename).first()
     if profile_picture_owner:
-        if not is_admin() and profile_picture_owner.id != user_id:
-            return jsonify({'error': 'Not found.'}), 404
         return send_from_directory(UPLOAD_FOLDER, filename)
 
     return jsonify({'error': 'Not found.'}), 404

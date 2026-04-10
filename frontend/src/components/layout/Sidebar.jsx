@@ -7,6 +7,9 @@ const mainNav = [
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { to: '/search', icon: 'search', label: 'Search' },
   { to: '/customers', icon: 'people', label: 'Customers' },
+  { to: '/reminders', icon: 'notifications_active', label: 'Reminders', adminOnly: true },
+  { to: '/appointments', icon: 'calendar_month', label: 'Appointments', adminOnly: true },
+  { to: '/technicians', icon: 'group', label: 'Technicians', adminOnly: true },
   { to: '/audit-log', icon: 'history', label: 'Activity Log', adminOnly: true },
 ];
 

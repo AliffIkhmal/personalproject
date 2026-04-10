@@ -227,12 +227,16 @@ export default function RecordDetailPage() {
             <div className="space-y-6">
               {record.technician_name && (
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-500/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-sky-400">engineering</span>
-                  </div>
+                  {record.technician_profile_picture ? (
+                    <img src={`/static/uploads/${record.technician_profile_picture}`} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-500/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-sky-400">engineering</span>
+                    </div>
+                  )}
                   <div>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">Assigned Tech</p>
-                    <p className="font-semibold text-sm">{record.technician_name}</p>
+                    <p className="font-semibold text-sm">{record.technician_display_name || record.technician_name}</p>
                   </div>
                 </div>
               )}
