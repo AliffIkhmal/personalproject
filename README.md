@@ -7,9 +7,10 @@ A full-stack web application for managing and tracking vehicle maintenance and s
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, Vite 8, Tailwind CSS v4, React Router v7, Socket.IO Client |
-| Backend | Flask 3.1, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-SocketIO, Flask-Limiter |
+| Backend | Flask 3.1, Flask-SQLAlchemy, Flask-Migrate (Alembic), Flask-SocketIO, Flask-Limiter, requests (Telegram Bot API) |
 | Database | SQLite (dev) / PostgreSQL (production via `DATABASE_URL`) |
 | Real-Time | WebSockets via Flask-SocketIO + Socket.IO Client |
+| Integrations | Telegram Bot API (reminders, chat ID auto-reply) |
 
 ## Features
 
@@ -18,13 +19,38 @@ A full-stack web application for managing and tracking vehicle maintenance and s
 - **Dashboard** — Service records table with sorting, filtering, pagination, and stat cards
 - **Record Management** — Full CRUD for service records with status workflow (Queued → In Progress → Completed)
 - **Image Gallery** — Multi-image upload per record with lightbox preview
-- **Customer Management** — Dedicated customer profiles with linked service history
+- **Customer Management** — Dedicated customer profiles with linked service history and Telegram Chat ID
+- **Reminders** — Set next service dates, urgency badges, and send Telegram reminders to customers
+- **Appointments** — Full CRUD for appointments, status workflow, and Telegram notify
 - **Advanced Search** — Text search with filters by status, service type, and date range
 - **Real-Time Updates** — WebSocket-powered live dashboard refresh across all connected clients
 - **Activity Log** — Full audit trail of all actions (create, update, delete, status changes, logins)
 - **Dark Mode** — Theme toggle with localStorage persistence and WCAG AA contrast ratios
 - **Security** — Rate limiting, CSRF protection, HTTP-only session cookies, input validation
-- **Responsive UI** — Steel blue (#7DAACB) and warm beige (#E8DBB3) color scheme with floating label inputs, password visibility toggles, and caps lock detection
+- **Responsive UI** — Modern color scheme, floating label inputs, password visibility toggles, and caps lock detection
+## Telegram Reminders & Chat ID Setup
+
+This app integrates with Telegram to send service reminders and appointment notifications to customers.
+
+**How it works:**
+
+1. Customer messages your Telegram bot (find it via @BotFather, press Start, or send any message)
+2. The bot auto-replies with their Chat ID
+3. Admin copies this Chat ID and pastes it into the customer's profile in the app (Customer Detail → Edit → Telegram Chat ID)
+4. Once set, the "Remind" button on the Reminders page will send Telegram notifications directly to the customer
+
+**Reminders Page:**
+- Two tabs: "Scheduled" (records with next service date) and "No Date Set"
+- Set next service date inline, urgency badges (Overdue, Due Soon, Upcoming)
+- Send Telegram reminders with one click
+
+**Appointments Page:**
+- Create, edit, delete appointments for customers
+- Appointment status workflow: requested → confirmed → completed/cancelled
+- Send Telegram notifications for appointments
+
+**Environment variable required:**
+- `TELEGRAM_BOT_TOKEN` — your Telegram bot token (set via env var, never hardcoded)
 
 ## Project Structure
 
@@ -106,6 +132,7 @@ This repo now includes a Docker-based deployment path for Render.
 - `SECRET_KEY` — required in production
 - `DATABASE_URL` — PostgreSQL connection string
 - `UPLOAD_FOLDER` — recommended for persistent uploads, e.g. `/var/data/uploads`
+- `TELEGRAM_BOT_TOKEN` — Telegram Bot API token for sending reminders
 
 ### One-time environment variables for a fresh database
 - `BOOTSTRAP_ADMIN_USERNAME`
