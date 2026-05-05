@@ -406,9 +406,6 @@ def bootstrap_admin_from_env():
         if not username or not password:
             return
 
-        if len(password) < 12:
-            raise RuntimeError('BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters long.')
-
         existing = Technician.query.filter_by(username=username).first()
         if existing:
             existing.role = 'admin'
@@ -416,14 +413,6 @@ def bootstrap_admin_from_env():
                 existing.password = generate_password_hash(password)
             db.session.commit()
             print(f'Bootstrapped admin account from environment: {username}')
-            print(
-                '[BOOTSTRAP_ADMIN_CHECK]',
-                f'username={username!r}',
-                f'id={existing.id}',
-                f'role={existing.role!r}',
-                f'password_length={len(password)}',
-                f'stored_matches_env={check_password_hash(existing.password, password)}',
-            )
             return
 
         tech = Technician(
@@ -435,14 +424,6 @@ def bootstrap_admin_from_env():
         db.session.add(tech)
         db.session.commit()
         print(f'Bootstrapped admin account from environment: {username}')
-        print(
-            '[BOOTSTRAP_ADMIN_CHECK]',
-            f'username={username!r}',
-            f'id={tech.id}',
-            f'role={tech.role!r}',
-            f'password_length={len(password)}',
-            f'stored_matches_env={check_password_hash(tech.password, password)}',
-        )
     except Exception:
         db.session.rollback()
         raise
@@ -474,9 +455,8 @@ def api_login():
     password = data.get('password', '')
 
     technician = Technician.query.filter_by(username=username).first()
-    password_matches = bool(technician and check_password_hash(technician.password, password))
 
-    if password_matches:
+    if technician and check_password_hash(technician.password, password):
         session['user_id'] = technician.id
         session['username'] = technician.username
         session['role'] = technician.role
@@ -484,14 +464,6 @@ def api_login():
                   user_id=technician.id, username=technician.username)
         return jsonify({'success': True, 'user': {'id': technician.id, 'username': technician.username, 'role': technician.role, 'profile_picture': technician.profile_picture, 'display_name': technician.display_name, 'email': technician.email, 'phone': technician.phone, 'created_at': technician.created_at}})
 
-    print(
-        '[LOGIN_FAILED]',
-        f'username={username!r}',
-        f'user_found={technician is not None}',
-        f'role={getattr(technician, "role", None)!r}',
-        f'password_length={len(password)}',
-        f'password_matches={password_matches}',
-    )
     return jsonify({'success': False, 'error': 'Invalid username or password.'}), 401
 
 
