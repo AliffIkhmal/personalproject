@@ -1,4 +1,9 @@
-const API_BASE = '/api';
+export const BACKEND_ORIGIN = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+const API_BASE = `${BACKEND_ORIGIN}/api`;
+
+export function assetUrl(path) {
+  return `${BACKEND_ORIGIN}${path}`;
+}
 
 async function request(url, options = {}) {
   const config = {

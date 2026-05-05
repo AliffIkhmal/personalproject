@@ -124,14 +124,15 @@ npm run build
 ```
 Flask serves the built React app from `frontend/dist/` automatically.
 
-## Docker & Render
+## Docker & Railway
 
-This repo now includes a Docker-based deployment path for Render.
+This repo includes a Docker-based deployment path for Railway.
 
 ### Required environment variables
 - `SECRET_KEY` — required in production
 - `DATABASE_URL` — PostgreSQL connection string
-- `UPLOAD_FOLDER` — recommended for persistent uploads, e.g. `/var/data/uploads`
+- `APP_ENV` — set to `production`
+- `ALLOWED_ORIGINS` — comma-separated allowed origins, including your Vercel frontend URL
 - `TELEGRAM_BOT_TOKEN` — Telegram Bot API token for sending reminders
 
 ### One-time environment variables for a fresh database
@@ -141,16 +142,17 @@ This repo now includes a Docker-based deployment path for Render.
 Set these only for the first deploy to create the initial admin account. Remove them after the admin is created.
 
 ### Optional environment variables
-- `ALLOWED_ORIGINS` — comma-separated allowed origins for cross-origin protection
+- `UPLOAD_FOLDER` — defaults to `static/uploads`; set this to your Railway volume mount path if different
 - `RATELIMIT_STORAGE_URI` — Redis/Valkey URI for shared rate limit storage
 - `HOST` — defaults to `0.0.0.0`
-- `PORT` — defaults to `5000` locally, Render provides this automatically
+- `PORT` — defaults to `5000` locally; Railway provides this automatically
+- `SESSION_COOKIE_SAMESITE` — defaults to `None` in production for a separate Vercel frontend
 
-### Render notes
-- The app exposes `GET /api/health` for Render health checks
-- Attach a persistent disk for uploads or move uploads to object storage
+### Railway notes
+- The app exposes `GET /api/health` for Railway health checks
+- Attach a Railway volume at `/app/static/uploads` for persistent uploads, or move uploads to object storage
 - Use PostgreSQL in production; SQLite is for local development only
-- Flask serves the built React frontend and the API from the same origin, which keeps cookie auth simple
+- Set `VITE_BACKEND_URL` in Vercel to your Railway backend URL, for example `https://your-backend.up.railway.app`
 
 ## License
 This project is licensed under the MIT License.

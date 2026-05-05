@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { assetUrl } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import StatusBadge from '../components/ui/StatusBadge';
 
@@ -98,7 +98,7 @@ export default function RecordDetailPage() {
             </div>
             {record.image_filename && (
               <div className="mt-6">
-                <img src={`/static/uploads/${record.image_filename}`} alt="Vehicle" className="max-w-xs rounded-lg shadow-sm dark:shadow-slate-950/20 cursor-pointer hover:shadow-md transition-shadow"
+                <img src={assetUrl(`/static/uploads/${record.image_filename}`)} alt="Vehicle" className="max-w-xs rounded-lg shadow-sm dark:shadow-slate-950/20 cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => setLightboxIdx('legacy')} />
               </div>
             )}
@@ -145,7 +145,7 @@ export default function RecordDetailPage() {
                 {record.images.map((img, idx) => (
                   <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-slate-100 dark:bg-slate-700">
                     <img
-                      src={`/static/uploads/${img.filename}`}
+                      src={assetUrl(`/static/uploads/${img.filename}`)}
                       alt={img.original_name || 'Service photo'}
                       className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
                       onClick={() => setLightboxIdx(idx)}
@@ -228,7 +228,7 @@ export default function RecordDetailPage() {
               {record.technician_name && (
                 <div className="flex items-center gap-4">
                   {record.technician_profile_picture ? (
-                    <img src={`/static/uploads/${record.technician_profile_picture}`} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    <img src={assetUrl(`/static/uploads/${record.technician_profile_picture}`)} alt="" className="w-10 h-10 rounded-lg object-cover" />
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-500/20 flex items-center justify-center">
                       <span className="material-symbols-outlined text-sky-400">engineering</span>
@@ -293,10 +293,10 @@ export default function RecordDetailPage() {
         const allImages = record.images || [];
         let src, canNav;
         if (lightboxIdx === 'legacy') {
-          src = `/static/uploads/${record.image_filename}`;
+          src = assetUrl(`/static/uploads/${record.image_filename}`);
           canNav = false;
         } else {
-          src = `/static/uploads/${allImages[lightboxIdx]?.filename}`;
+          src = assetUrl(`/static/uploads/${allImages[lightboxIdx]?.filename}`);
           canNav = allImages.length > 1;
         }
         return (

@@ -10,6 +10,7 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 import os
 import math
 import secrets
@@ -25,16 +26,6 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).parent / '.env', override=True)
 load_dotenv(dotenv_path=Path(__file__).parent / 'venv' / '.env', override=True)
-
-# Debug: print cwd, .env paths, and all TELEGRAM env vars at startup
-import sys
-print(f"[DEBUG] CWD: {os.getcwd()}")
-print(f"[DEBUG] __file__: {__file__}")
-print(f"[DEBUG] .env path: {Path(__file__).parent / '.env'}")
-print(f"[DEBUG] venv/.env path: {Path(__file__).parent / 'venv' / '.env'}")
-for k, v in os.environ.items():
-    if k.startswith('TELEGRAM'):
-        print(f"[DEBUG] ENV {k} = {v}")
 
 # GMT+8 timezone
 GMT8 = timezone(timedelta(hours=8))
@@ -64,7 +55,7 @@ RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', '').strip()
 
 def is_production():
     env = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or os.environ.get('PYTHON_ENV') or '').lower()
-    return env == 'production' or bool(os.environ.get('RENDER_EXTERNAL_URL'))
+    return env == 'production'
 
 
 def normalize_origin(origin):
@@ -78,10 +69,6 @@ def get_configured_origins():
         cleaned = origin.strip()
         if cleaned:
             origins.add(normalize_origin(cleaned))
-
-    render_origin = os.environ.get('RENDER_EXTERNAL_URL', '').strip()
-    if render_origin:
-        origins.add(normalize_origin(render_origin))
 
     if not is_production():
         origins.update(DEV_ALLOWED_ORIGINS)
@@ -254,8 +241,20 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = load_or_create_secret_key()
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB upload limit
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = os.environ.get(
+    'SESSION_COOKIE_SAMESITE',
+    'None' if is_production() else 'Lax',
+)
 app.config['SESSION_COOKIE_SECURE'] = is_production()
+CORS(
+    app,
+    supports_credentials=True,
+    origins=sorted(get_configured_origins()),
+    resources={
+        r"/api/*": {"origins": sorted(get_configured_origins())},
+        r"/static/uploads/*": {"origins": sorted(get_configured_origins())},
+    },
+)
 
 # --- Database Configuration ---
 # Use DATABASE_URL env var for PostgreSQL, fallback to SQLite for local dev

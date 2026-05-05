@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { assetUrl } from '../../api';
 
 const mainNav = [
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
@@ -61,7 +62,7 @@ export default function Sidebar() {
       <div className="space-y-1 pt-6 border-t border-slate-800/50">
         <div className="px-6 pb-4 flex items-center gap-3">
           {user?.profile_picture ? (
-            <img src={`/static/uploads/${user.profile_picture}`} alt="" className="w-8 h-8 rounded-lg object-cover" />
+            <img src={assetUrl(`/static/uploads/${user.profile_picture}`)} alt="" className="w-8 h-8 rounded-lg object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-lg bg-sky-600/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-sky-400 text-lg">{isAdmin ? 'admin_panel_settings' : 'engineering'}</span>

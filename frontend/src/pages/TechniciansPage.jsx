@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../api';
+import api, { assetUrl } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/ui/Modal';
 import FloatingInput from '../components/ui/FloatingInput';
@@ -165,7 +165,7 @@ export default function TechniciansPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {t.profile_picture ? (
-                          <img src={`/static/uploads/${t.profile_picture}`} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                          <img src={assetUrl(`/static/uploads/${t.profile_picture}`)} alt="" className="w-9 h-9 rounded-lg object-cover" />
                         ) : (
                           <div className="w-9 h-9 rounded-lg bg-sky-600/10 flex items-center justify-center">
                             <span className="material-symbols-outlined text-sky-400 text-lg">{t.role === 'admin' ? 'admin_panel_settings' : 'engineering'}</span>

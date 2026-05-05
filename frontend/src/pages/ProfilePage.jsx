@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import api from '../api';
+import api, { assetUrl } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingInput from '../components/ui/FloatingInput';
@@ -119,7 +119,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-6 mb-8">
               <div className="relative group">
                 {user?.profile_picture ? (
-                  <img src={`/static/uploads/${user.profile_picture}`} alt="" className="w-24 h-24 rounded-2xl object-cover ring-4 ring-surface-container" />
+                  <img src={assetUrl(`/static/uploads/${user.profile_picture}`)} alt="" className="w-24 h-24 rounded-2xl object-cover ring-4 ring-surface-container" />
                 ) : (
                   <div className="w-24 h-24 rounded-2xl bg-sky-100 dark:bg-sky-500/20 flex items-center justify-center ring-4 ring-surface-container">
                     <span className="material-symbols-outlined text-4xl text-sky-600 dark:text-sky-400">person</span>

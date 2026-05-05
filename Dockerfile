@@ -16,8 +16,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_APP=app.py \
     APP_ENV=production \
-    HOST=0.0.0.0 \
-    PORT=10000
+    HOST=0.0.0.0
 
 WORKDIR /app
 
@@ -27,8 +26,8 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 COPY . ./
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-RUN mkdir -p /var/data/uploads ./static/uploads
+RUN mkdir -p ./static/uploads
 
-EXPOSE 10000
+EXPOSE 5000
 
 CMD ["sh", "./start.sh"]

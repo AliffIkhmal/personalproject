@@ -1,4 +1,5 @@
 import { useAuth } from '../../contexts/AuthContext';
+import { assetUrl } from '../../api';
 
 export default function TopAppBar() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function TopAppBar() {
             <p className="text-[10px] text-slate-500 dark:text-slate-400">Technician</p>
           </div>
           {user?.profile_picture ? (
-            <img src={`/static/uploads/${user.profile_picture}`} alt="" className="w-10 h-10 rounded-full object-cover" />
+            <img src={assetUrl(`/static/uploads/${user.profile_picture}`)} alt="" className="w-10 h-10 rounded-full object-cover" />
           ) : (
             <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold text-sm uppercase">
               {(user?.display_name || user?.username)?.charAt(0) || 'U'}
