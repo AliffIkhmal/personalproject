@@ -398,18 +398,35 @@ def emit_update(event='records_updated', data=None):
 
 
 def bootstrap_admin_from_env():
-    """Create the first admin only when explicit bootstrap credentials are provided."""
+    """Create or repair the bootstrap admin while explicit credentials are provided."""
     username = os.environ.get('BOOTSTRAP_ADMIN_USERNAME', '').strip()
     password = os.environ.get('BOOTSTRAP_ADMIN_PASSWORD', '')
 
     try:
-        if Technician.query.first() is not None or not username or not password:
+        if not username or not password:
             return
 
         if len(password) < 12:
             raise RuntimeError('BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters long.')
 
-        tech = Technician(username=username, password=generate_password_hash(password), role='admin', created_at=now_gmt8())
+        existing = Technician.query.filter_by(username=username).first()
+        if existing:
+            existing.role = 'admin'
+            if not check_password_hash(existing.password, password):
+                existing.password = generate_password_hash(password)
+            db.session.commit()
+            print(f'Bootstrapped admin account from environment: {username}')
+            return
+
+        if Technician.query.filter_by(role='admin').first() is not None:
+            return
+
+        tech = Technician(
+            username=username,
+            password=generate_password_hash(password),
+            role='admin',
+            created_at=now_gmt8(),
+        )
         db.session.add(tech)
         db.session.commit()
         print(f'Bootstrapped admin account from environment: {username}')
