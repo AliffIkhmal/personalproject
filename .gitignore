@@ -6,5 +6,5 @@ instance/
 *.db
 static/uploads/
 node_modules/
-frontend/dist/
+frontend/
 SYSTEM_DESIGN.txt
