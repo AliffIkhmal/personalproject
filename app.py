@@ -418,9 +418,6 @@ def bootstrap_admin_from_env():
             print(f'Bootstrapped admin account from environment: {username}')
             return
 
-        if Technician.query.filter_by(role='admin').first() is not None:
-            return
-
         tech = Technician(
             username=username,
             password=generate_password_hash(password),
@@ -457,7 +454,7 @@ def auth_check():
 @limiter.limit("10 per minute")
 def api_login():
     data = safe_get_json()
-    username = data.get('username', '')
+    username = data.get('username', '').strip()
     password = data.get('password', '')
 
     technician = Technician.query.filter_by(username=username).first()
