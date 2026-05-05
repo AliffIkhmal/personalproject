@@ -458,8 +458,9 @@ def api_login():
     password = data.get('password', '')
 
     technician = Technician.query.filter_by(username=username).first()
+    password_matches = bool(technician and check_password_hash(technician.password, password))
 
-    if technician and check_password_hash(technician.password, password):
+    if password_matches:
         session['user_id'] = technician.id
         session['username'] = technician.username
         session['role'] = technician.role
@@ -467,6 +468,14 @@ def api_login():
                   user_id=technician.id, username=technician.username)
         return jsonify({'success': True, 'user': {'id': technician.id, 'username': technician.username, 'role': technician.role, 'profile_picture': technician.profile_picture, 'display_name': technician.display_name, 'email': technician.email, 'phone': technician.phone, 'created_at': technician.created_at}})
 
+    print(
+        '[LOGIN_FAILED]',
+        f'username={username!r}',
+        f'user_found={technician is not None}',
+        f'role={getattr(technician, "role", None)!r}',
+        f'password_length={len(password)}',
+        f'password_matches={password_matches}',
+    )
     return jsonify({'success': False, 'error': 'Invalid username or password.'}), 401
 
 
