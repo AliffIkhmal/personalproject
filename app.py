@@ -416,6 +416,14 @@ def bootstrap_admin_from_env():
                 existing.password = generate_password_hash(password)
             db.session.commit()
             print(f'Bootstrapped admin account from environment: {username}')
+            print(
+                '[BOOTSTRAP_ADMIN_CHECK]',
+                f'username={username!r}',
+                f'id={existing.id}',
+                f'role={existing.role!r}',
+                f'password_length={len(password)}',
+                f'stored_matches_env={check_password_hash(existing.password, password)}',
+            )
             return
 
         tech = Technician(
@@ -427,6 +435,14 @@ def bootstrap_admin_from_env():
         db.session.add(tech)
         db.session.commit()
         print(f'Bootstrapped admin account from environment: {username}')
+        print(
+            '[BOOTSTRAP_ADMIN_CHECK]',
+            f'username={username!r}',
+            f'id={tech.id}',
+            f'role={tech.role!r}',
+            f'password_length={len(password)}',
+            f'stored_matches_env={check_password_hash(tech.password, password)}',
+        )
     except Exception:
         db.session.rollback()
         raise
