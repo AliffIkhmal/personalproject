@@ -43,6 +43,7 @@ psycopg2-binary==2.9.11
 pycparser==3.0
 Pygments==2.19.2
 pytest==9.0.2
+python-dotenv==1.2.1
 python-engineio==4.13.1
 python-socketio==5.16.1
 pywin32==311; platform_system == "Windows"
