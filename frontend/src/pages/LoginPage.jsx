@@ -76,8 +76,8 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-[0_20px_40px_rgba(11,28,48,0.06)] overflow-hidden border border-outline-variant/10">
           {/* Brand Header */}
           <div className="pt-10 pb-8 px-8 flex flex-col items-center">
-            <h1 className="font-headline font-extrabold text-3xl tracking-tighter text-on-surface">ServiceTrack</h1>
-            <p className="text-on-surface-variant text-sm uppercase tracking-[0.05em] mt-1 opacity-70">Precision Engineering</p>
+            <h1 className="font-headline font-extrabold text-3xl tracking-tighter text-on-surface">Vehicle Service Tracking</h1>
+            <p className="text-sm text-on-surface-variant mt-1 font-medium">Technician login and customer service status lookup.</p>
           </div>
 
           {/* Tabs */}
@@ -88,7 +88,7 @@ export default function LoginPage() {
                 activeTab === 'technician' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              Technician Login
+              Technician or Admin Login
             </button>
             <button
               onClick={() => setActiveTab('customer')}
@@ -151,9 +151,7 @@ export default function LoginPage() {
             )}
 
             <div className="mt-8 pt-6 border-t border-outline-variant/10 text-center">
-              <p className="text-[13px] text-on-surface-variant font-medium">
-                Default credentials: <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">admin / admin123</code>
-              </p>
+              <p className="text-xs text-on-surface-variant">&copy; {new Date().getFullYear()} Vehicle Service Tracking. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -161,8 +159,6 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="mt-6 flex justify-between items-center px-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">System Operational</span>
           </div>
         </div>
       </main>
