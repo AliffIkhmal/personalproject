@@ -17,6 +17,27 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+/** Format "14:30" → "2:30 PM", returns empty string if falsy */
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
+/** Format "2026-05-10" → "10 May 2026" */
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -128,18 +149,17 @@ export default function AppointmentsPage() {
       await api.post(`/appointments/${id}/notify`);
       addToast('Notification sent via Telegram!', 'success');
     } catch (err) {
-      addToast(err.error || 'Failed to notify.', 'error');
+      const errorMsg = err.error || 'Failed to notify.';
+      if (errorMsg.includes('chat not found')) {
+        addToast('Telegram Chat ID is invalid. The customer must message your bot first to get a valid Chat ID, then update it in their customer profile.', 'error');
+      } else if (errorMsg.includes('no Telegram Chat ID')) {
+        addToast('No Telegram Chat ID set. Go to the customer profile and add their Chat ID first.', 'error');
+      } else {
+        addToast(errorMsg, 'error');
+      }
     } finally {
       setNotifying(null);
     }
-  };
-
-  const counts = {
-    '': appointments.length,
-    requested: appointments.filter((a) => a.status === 'requested').length,
-    confirmed: appointments.filter((a) => a.status === 'confirmed').length,
-    completed: appointments.filter((a) => a.status === 'completed').length,
-    cancelled: appointments.filter((a) => a.status === 'cancelled').length,
   };
 
   // Recompute counts from unfiltered list
@@ -152,6 +172,8 @@ export default function AppointmentsPage() {
     '': allAppointments.length,
     requested: allAppointments.filter((a) => a.status === 'requested').length,
     confirmed: allAppointments.filter((a) => a.status === 'confirmed').length,
+    completed: allAppointments.filter((a) => a.status === 'completed').length,
+    cancelled: allAppointments.filter((a) => a.status === 'cancelled').length,
   };
 
   return (
@@ -187,7 +209,7 @@ export default function AppointmentsPage() {
                 ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 hover:border-sky-200 dark:hover:border-sky-500/30'
             }`}>
-            {t.label} ({allCounts[t.value] ?? counts[t.value] ?? 0})
+            {t.label} ({allCounts[t.value] ?? 0})
           </button>
         ))}
       </div>
@@ -229,8 +251,11 @@ export default function AppointmentsPage() {
                       {a.license_plate && <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{a.license_plate}</span>}
                     </td>
                     <td className="px-6 py-3">
-                      <p className="text-sm font-semibold text-on-surface">{a.appointment_date}</p>
-                      {a.appointment_time && <p className="text-xs text-slate-500 dark:text-slate-400">{a.appointment_time}</p>}
+                      <p className="text-sm font-semibold text-on-surface">{formatDate(a.appointment_date)}</p>
+                      <p className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${a.appointment_time ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        {a.appointment_time ? formatTime(a.appointment_time) : 'No time set'}
+                      </p>
                     </td>
                     <td className="px-6 py-3 text-sm font-semibold text-on-surface">{a.service_type || '—'}</td>
                     <td className="px-6 py-3">
@@ -245,7 +270,7 @@ export default function AppointmentsPage() {
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
                         <button onClick={() => handleNotify(a.id)} disabled={notifying === a.id || !a.telegram_chat_id}
-                          title={a.telegram_chat_id ? 'Send Telegram Notification' : 'No Telegram ID'}
+                          title={a.telegram_chat_id ? 'Send Telegram Notification' : 'No Telegram Chat ID — set it in Customer Profile'}
                           className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                           <span className="material-symbols-outlined text-lg">{notifying === a.id ? 'hourglass_top' : 'send'}</span>
                         </button>

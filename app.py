@@ -3,6 +3,7 @@
 # Flask JSON API backend for React frontend.
 # ==========================================
 
+
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -18,6 +19,22 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+# Load environment variables from .env and venv/.env
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).parent / '.env', override=True)
+load_dotenv(dotenv_path=Path(__file__).parent / 'venv' / '.env', override=True)
+
+# Debug: print cwd, .env paths, and all TELEGRAM env vars at startup
+import sys
+print(f"[DEBUG] CWD: {os.getcwd()}")
+print(f"[DEBUG] __file__: {__file__}")
+print(f"[DEBUG] .env path: {Path(__file__).parent / '.env'}")
+print(f"[DEBUG] venv/.env path: {Path(__file__).parent / 'venv' / '.env'}")
+for k, v in os.environ.items():
+    if k.startswith('TELEGRAM'):
+        print(f"[DEBUG] ENV {k} = {v}")
 
 # GMT+8 timezone
 GMT8 = timezone(timedelta(hours=8))
@@ -1402,6 +1419,7 @@ def api_delete_customer(customer_id):
 # ------------------------------------------
 def send_telegram_message(chat_id, text):
     """Send a message via Telegram Bot API. Returns (success, error_msg)."""
+    print(f"[DEBUG] send_telegram_message: TELEGRAM_BOT_TOKEN = '{TELEGRAM_BOT_TOKEN}'")
     if not TELEGRAM_BOT_TOKEN:
         return False, 'Telegram bot token not configured. Set TELEGRAM_BOT_TOKEN env variable.'
     url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
@@ -1705,7 +1723,7 @@ def api_notify_appointment(appointment_id):
 
     customer = Customer.query.get(appointment.customer_id)
     if not customer or not customer.telegram_chat_id:
-        return jsonify({'error': 'Customer has no Telegram Chat ID linked.'}), 400
+        return jsonify({'error': 'Customer has no Telegram Chat ID linked. Ask the customer to message your Telegram bot first, then update their Chat ID in the customer profile.'}), 400
 
     status_labels = {
         'requested': 'has been received',
@@ -1714,7 +1732,18 @@ def api_notify_appointment(appointment_id):
         'cancelled': 'has been cancelled ❌',
     }
     status_text = status_labels.get(appointment.status, appointment.status)
-    time_text = f" at {appointment.appointment_time}" if appointment.appointment_time else ""
+
+    # Format time for display (24h → 12h AM/PM)
+    time_text = ""
+    if appointment.appointment_time:
+        try:
+            parts = appointment.appointment_time.split(':')
+            h, m = int(parts[0]), int(parts[1])
+            suffix = 'PM' if h >= 12 else 'AM'
+            h12 = h % 12 or 12
+            time_text = f" at {h12}:{m:02d} {suffix}"
+        except (ValueError, IndexError):
+            time_text = f" at {appointment.appointment_time}"
 
     message = (
         f"📅 <b>Appointment Update</b>\n\n"
@@ -1723,18 +1752,24 @@ def api_notify_appointment(appointment_id):
         f"{status_text}.\n\n"
     )
     if appointment.vehicle_name:
-        message += f"Vehicle: {appointment.vehicle_name}"
+        message += f"🚗 Vehicle: {appointment.vehicle_name}"
         if appointment.license_plate:
             message += f" ({appointment.license_plate})"
         message += "\n"
+    if appointment.service_type:
+        message += f"🔧 Service: {appointment.service_type}\n"
     if appointment.notes:
-        message += f"Notes: {appointment.notes}\n"
-    message += "\nThank you!"
+        message += f"📝 Notes: {appointment.notes}\n"
+    message += "\nThank you! 🙏"
 
     success, error = send_telegram_message(customer.telegram_chat_id, message)
     if not success:
+        if 'chat not found' in (error or '').lower():
+            return jsonify({'error': 'Telegram Chat ID is invalid — the customer must message your bot first to activate the chat. Then update the correct Chat ID in their customer profile.'}), 400
         return jsonify({'error': f'Failed to send: {error}'}), 500
 
+    log_audit('notify', 'appointment', appointment_id,
+              f'Sent Telegram notification for appointment #{appointment_id} to {customer.name}.')
     return jsonify({'success': True})
 
 
@@ -1773,6 +1808,8 @@ def serve_upload(filename):
 
 # ------------------------------------------
 # SERVE REACT SPA (catch-all for client-side routing)
+# This MUST be the last route registered so it doesn't
+# shadow the /api/* routes above.
 # ------------------------------------------
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
