@@ -4,19 +4,24 @@
 # ==========================================
 
 
-from flask import Flask, request, jsonify, session, send_from_directory
+from flask import Flask, request, jsonify, session, send_from_directory, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from sqlalchemy import inspect, text
 import os
 import math
 import secrets
 import filetype
 import requests as http_requests
+import re
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlencode, quote, urlparse
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -51,6 +56,17 @@ DEV_ALLOWED_ORIGINS = {
 }
 SECRET_KEY_FILE = '.secret_key'
 RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', '').strip()
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
+GOOGLE_ALLOWED_DOMAINS = {
+    domain.strip().lower()
+    for domain in os.environ.get('GOOGLE_ALLOWED_DOMAINS', '').split(',')
+    if domain.strip()
+}
+FRONTEND_URL = os.environ.get('FRONTEND_URL', '').strip().rstrip('/')
 
 
 def is_production():
@@ -69,6 +85,9 @@ def get_configured_origins():
         cleaned = origin.strip()
         if cleaned:
             origins.add(normalize_origin(cleaned))
+
+    if FRONTEND_URL:
+        origins.add(normalize_origin(FRONTEND_URL))
 
     if not is_production():
         origins.update(DEV_ALLOWED_ORIGINS)
@@ -107,6 +126,45 @@ def safe_get_json():
 def now_gmt8():
     """Return current datetime string in GMT+8."""
     return datetime.now(GMT8).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def normalize_email(email):
+    return (email or '').strip().lower()
+
+
+def generate_unusable_password_hash():
+    return generate_password_hash(secrets.token_urlsafe(48))
+
+
+def username_seed_from_email(email):
+    local_part = normalize_email(email).split('@', 1)[0]
+    seed = re.sub(r'[^a-z0-9_.-]+', '_', local_part)
+    seed = seed.strip('._-')[:70]
+    return seed if len(seed) >= 3 else 'user'
+
+
+def unique_username_from_email(email):
+    seed = username_seed_from_email(email)
+    username = seed
+    suffix = 2
+    while Technician.query.filter_by(username=username).first():
+        username = f'{seed}_{suffix}'
+        suffix += 1
+    return username
+
+
+def serialize_technician_user(tech):
+    return {
+        'id': tech.id,
+        'username': tech.username,
+        'role': tech.role,
+        'profile_picture': tech.profile_picture,
+        'display_name': tech.display_name,
+        'email': tech.email,
+        'phone': tech.phone,
+        'created_at': tech.created_at,
+        'auth_provider': 'google' if tech.google_sub else 'pending_google',
+    }
 
 
 def row_to_dict(row):
@@ -175,6 +233,116 @@ def validate_request_source():
     return jsonify({'error': 'Cross-origin request blocked.'}), 403
 
 
+def google_auth_configured():
+    return bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+
+def get_google_redirect_uri():
+    if GOOGLE_REDIRECT_URI:
+        return GOOGLE_REDIRECT_URI
+    return url_for('google_auth_callback', _external=True)
+
+
+def google_auto_create_enabled():
+    configured = os.environ.get('GOOGLE_AUTO_CREATE_USERS', '').strip().lower()
+    if configured:
+        return configured in {'1', 'true', 'yes', 'on'}
+    return not is_production()
+
+
+def get_frontend_origin_from_request():
+    allowed_origins = get_allowed_request_origins()
+    source = request.args.get('frontend_origin', '').strip() or request.headers.get('Origin', '').strip() or request.headers.get('Referer', '').strip()
+    if source and is_allowed_request_source(source, allowed_origins):
+        parsed = urlparse(source)
+        if parsed.scheme and parsed.netloc:
+            return f'{parsed.scheme}://{parsed.netloc}'
+        return normalize_origin(source)
+    if FRONTEND_URL:
+        return FRONTEND_URL
+    return normalize_origin(request.host_url)
+
+
+def safe_next_path(next_path):
+    if not next_path or not next_path.startswith('/') or next_path.startswith('//'):
+        return '/dashboard'
+    return next_path
+
+
+def frontend_redirect_url(path, origin=None):
+    base = (origin or FRONTEND_URL or normalize_origin(request.host_url)).rstrip('/')
+    return f'{base}{safe_next_path(path)}'
+
+
+def redirect_to_login_error(message, origin=None):
+    return redirect(frontend_redirect_url(f'/login?auth_error={quote(message)}', origin))
+
+
+def email_domain_allowed(email):
+    if not GOOGLE_ALLOWED_DOMAINS:
+        return True
+    domain = normalize_email(email).rsplit('@', 1)[-1]
+    return domain in GOOGLE_ALLOWED_DOMAINS
+
+
+def is_bootstrap_admin_email(email):
+    return normalize_email(email) == normalize_email(os.environ.get('BOOTSTRAP_ADMIN_EMAIL', ''))
+
+
+def get_or_create_google_technician(profile):
+    google_sub = (profile.get('sub') or '').strip()
+    email = normalize_email(profile.get('email'))
+    display_name = (profile.get('name') or '').strip()
+
+    if not google_sub or not email:
+        return None, 'Google did not return a usable account identity.'
+    if not profile.get('email_verified'):
+        return None, 'Google account email must be verified before signing in.'
+    if not email_domain_allowed(email):
+        return None, 'This Google account is not allowed for this workspace.'
+
+    tech = Technician.query.filter_by(google_sub=google_sub).first()
+    if tech is None:
+        tech = Technician.query.filter(db.func.lower(Technician.email) == email).first()
+
+    if tech:
+        changed = False
+        if not tech.google_sub:
+            tech.google_sub = google_sub
+            changed = True
+        if normalize_email(tech.email) != email:
+            tech.email = email
+            changed = True
+        if display_name and not tech.display_name:
+            tech.display_name = display_name
+            changed = True
+        if is_bootstrap_admin_email(email) and tech.role != 'admin':
+            tech.role = 'admin'
+            changed = True
+        if changed:
+            db.session.commit()
+        return tech, None
+
+    if not google_auto_create_enabled() and not is_bootstrap_admin_email(email):
+        return None, 'Ask an admin to add your Google email before signing in.'
+
+    role = 'admin' if is_bootstrap_admin_email(email) else 'technician'
+    tech = Technician(
+        username=unique_username_from_email(email),
+        password=generate_unusable_password_hash(),
+        role=role,
+        email=email,
+        display_name=display_name or None,
+        google_sub=google_sub,
+        created_at=now_gmt8(),
+    )
+    db.session.add(tech)
+    db.session.commit()
+    log_audit('register', 'technician', tech.id, f'Google provisioned new {role} "{tech.username}".',
+              user_id=tech.id, username=tech.username)
+    return tech, None
+
+
 def validate_uploaded_image(file):
     if file is None or file.filename == '':
         return False, 'No file selected.'
@@ -217,10 +385,16 @@ def validate_image_batch(files):
 
 
 def require_auth():
-    """Return user_id from session, or None if not logged in."""
+    """Return user_id from session only if the backing technician still exists."""
     if 'user_id' not in session:
         return None
-    return session['user_id']
+    tech = Technician.query.get(session['user_id'])
+    if tech is None:
+        session.clear()
+        return None
+    session['username'] = tech.username
+    session['role'] = tech.role
+    return tech.id
 
 
 def is_admin():
@@ -298,6 +472,7 @@ class Technician(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
+    google_sub = db.Column(db.String(255), unique=True, nullable=True)
     role = db.Column(db.String(20), default='technician', nullable=False)
     profile_picture = db.Column(db.String(200), nullable=True)
     display_name = db.Column(db.String(120), nullable=True)
@@ -384,7 +559,7 @@ def log_audit(action, entity_type=None, entity_id=None, description=None, user_i
         entity_type=entity_type,
         entity_id=entity_id,
         description=description,
-        user_id=user_id or session.get('user_id'),
+        user_id=session.get('user_id') if user_id is None else user_id,
         username=username or session.get('username', 'system'),
         timestamp=now_gmt8(),
     )
@@ -398,18 +573,27 @@ def emit_update(event='records_updated', data=None):
 
 
 def bootstrap_admin_from_env():
-    """Create or repair the bootstrap admin while explicit credentials are provided."""
+    """Create or repair the bootstrap admin while explicit identity is provided."""
     username = os.environ.get('BOOTSTRAP_ADMIN_USERNAME', '').strip()
     password = os.environ.get('BOOTSTRAP_ADMIN_PASSWORD', '')
+    email = normalize_email(os.environ.get('BOOTSTRAP_ADMIN_EMAIL', ''))
 
     try:
-        if not username or not password:
+        if not username and not email:
             return
 
+        if not username and email:
+            username = unique_username_from_email(email)
+
         existing = Technician.query.filter_by(username=username).first()
+        if existing is None and email:
+            existing = Technician.query.filter(db.func.lower(Technician.email) == email).first()
+
         if existing:
             existing.role = 'admin'
-            if not check_password_hash(existing.password, password):
+            if email:
+                existing.email = email
+            if password and not check_password_hash(existing.password, password):
                 existing.password = generate_password_hash(password)
             db.session.commit()
             print(f'Bootstrapped admin account from environment: {username}')
@@ -417,8 +601,9 @@ def bootstrap_admin_from_env():
 
         tech = Technician(
             username=username,
-            password=generate_password_hash(password),
+            password=generate_password_hash(password) if password else generate_unusable_password_hash(),
             role='admin',
+            email=email or None,
             created_at=now_gmt8(),
         )
         db.session.add(tech)
@@ -440,31 +625,99 @@ def api_health():
 
 @app.route('/api/auth/check', methods=['GET'])
 def auth_check():
-    if 'user_id' in session:
-        tech = Technician.query.get(session['user_id'])
-        profile_picture = tech.profile_picture if tech else None
-        return jsonify({'authenticated': True, 'user': {'id': session['user_id'], 'username': session['username'], 'role': session.get('role', 'technician'), 'profile_picture': profile_picture, 'display_name': tech.display_name if tech else None, 'email': tech.email if tech else None, 'phone': tech.phone if tech else None, 'created_at': tech.created_at if tech else None}})
-    return jsonify({'authenticated': False})
+    user_id = require_auth()
+    if user_id is None:
+        return jsonify({'authenticated': False})
+    tech = Technician.query.get(user_id)
+    return jsonify({'authenticated': True, 'user': serialize_technician_user(tech)})
+
+
+@app.route('/api/auth/google/start', methods=['GET'])
+@limiter.limit("10 per minute")
+def google_auth_start():
+    frontend_origin = get_frontend_origin_from_request()
+    if not google_auth_configured():
+        return redirect_to_login_error('Google sign-in is not configured yet.', frontend_origin)
+
+    state = secrets.token_urlsafe(32)
+    session['google_oauth_state'] = state
+    session['google_oauth_next'] = safe_next_path(request.args.get('next', '/dashboard'))
+    session['google_oauth_frontend_origin'] = frontend_origin
+
+    params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': get_google_redirect_uri(),
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'prompt': 'select_account',
+    }
+    return redirect(f'{GOOGLE_AUTH_URL}?{urlencode(params)}')
+
+
+@app.route('/api/auth/google/callback', methods=['GET'])
+@limiter.limit("20 per hour")
+def google_auth_callback():
+    frontend_origin = session.pop('google_oauth_frontend_origin', None)
+    next_path = session.pop('google_oauth_next', '/dashboard')
+    expected_state = session.pop('google_oauth_state', None)
+    returned_state = request.args.get('state', '')
+
+    if request.args.get('error'):
+        return redirect_to_login_error('Google sign-in was cancelled.', frontend_origin)
+    if not expected_state or not secrets.compare_digest(expected_state, returned_state):
+        return redirect_to_login_error('Google sign-in could not be verified. Please try again.', frontend_origin)
+    if not google_auth_configured():
+        return redirect_to_login_error('Google sign-in is not configured yet.', frontend_origin)
+
+    code = request.args.get('code', '')
+    if not code:
+        return redirect_to_login_error('Google did not return an authorization code.', frontend_origin)
+
+    try:
+        token_response = http_requests.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                'code': code,
+                'client_id': GOOGLE_CLIENT_ID,
+                'client_secret': GOOGLE_CLIENT_SECRET,
+                'redirect_uri': get_google_redirect_uri(),
+                'grant_type': 'authorization_code',
+            },
+            timeout=10,
+        )
+        token_response.raise_for_status()
+        token_data = token_response.json()
+        profile = id_token.verify_oauth2_token(
+            token_data.get('id_token'),
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID,
+        )
+    except Exception:
+        db.session.rollback()
+        return redirect_to_login_error('Google sign-in failed. Please try again.', frontend_origin)
+
+    try:
+        tech, error = get_or_create_google_technician(profile)
+    except Exception:
+        db.session.rollback()
+        return redirect_to_login_error('Could not save Google account details. Please try again.', frontend_origin)
+    if error:
+        return redirect_to_login_error(error, frontend_origin)
+
+    session.clear()
+    session['user_id'] = tech.id
+    session['username'] = tech.username
+    session['role'] = tech.role
+    log_audit('login', 'technician', tech.id, f'User "{tech.username}" logged in with Google.',
+              user_id=tech.id, username=tech.username)
+    return redirect(frontend_redirect_url(next_path, frontend_origin))
 
 
 @app.route('/api/login', methods=['POST'])
 @limiter.limit("10 per minute")
 def api_login():
-    data = safe_get_json()
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
-
-    technician = Technician.query.filter_by(username=username).first()
-
-    if technician and check_password_hash(technician.password, password):
-        session['user_id'] = technician.id
-        session['username'] = technician.username
-        session['role'] = technician.role
-        log_audit('login', 'technician', technician.id, f'User "{username}" logged in.',
-                  user_id=technician.id, username=technician.username)
-        return jsonify({'success': True, 'user': {'id': technician.id, 'username': technician.username, 'role': technician.role, 'profile_picture': technician.profile_picture, 'display_name': technician.display_name, 'email': technician.email, 'phone': technician.phone, 'created_at': technician.created_at}})
-
-    return jsonify({'success': False, 'error': 'Invalid username or password.'}), 401
+    return jsonify({'success': False, 'error': 'Password login has been replaced by Google sign-in.'}), 410
 
 
 @app.route('/api/customer-lookup', methods=['POST'])
@@ -485,7 +738,16 @@ def api_customer_lookup():
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
-    log_audit('logout', 'technician', session.get('user_id'), f'User "{session.get("username")}" logged out.')
+    user_id = session.get('user_id')
+    username = session.get('username')
+    if user_id and Technician.query.get(user_id) is None:
+        user_id = None
+        username = 'system'
+        session.pop('user_id', None)
+        session.pop('username', None)
+        session.pop('role', None)
+    log_audit('logout', 'technician', user_id, f'User "{username}" logged out.',
+              user_id=user_id, username=username)
     session.clear()
     return jsonify({'success': True})
 
@@ -922,32 +1184,41 @@ def api_register():
         return admin_check
 
     data = safe_get_json()
+    email = normalize_email(data.get('email', ''))
     username = data.get('username', '').strip()
-    password = data.get('password', '')
-    confirm_password = data.get('confirm_password', '')
+    display_name = data.get('display_name', '').strip()
     role = data.get('role', 'technician').strip()
 
-    if not username or not password:
-        return jsonify({'error': 'Username and password are required.'}), 400
-    if len(username) < 3:
+    if not email or '@' not in email:
+        return jsonify({'error': 'A valid Google email is required.'}), 400
+    if not email_domain_allowed(email):
+        return jsonify({'error': 'This email domain is not allowed for Google sign-in.'}), 400
+    if username and len(username) < 3:
         return jsonify({'error': 'Username must be at least 3 characters.'}), 400
-    if len(password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
-    if password != confirm_password:
-        return jsonify({'error': 'Passwords do not match.'}), 400
     if role not in VALID_ROLES:
         return jsonify({'error': f'Invalid role. Must be one of: {VALID_ROLES}'}), 400
 
-    existing = Technician.query.filter_by(username=username).first()
-    if existing:
-        return jsonify({'error': f'Username "{username}" is already taken.'}), 409
+    existing_email = Technician.query.filter(db.func.lower(Technician.email) == email).first()
+    if existing_email:
+        return jsonify({'error': f'Email "{email}" is already registered.'}), 409
 
-    hashed_password = generate_password_hash(password)
-    tech = Technician(username=username, password=hashed_password, role=role, created_at=now_gmt8())
+    if username and Technician.query.filter_by(username=username).first():
+        return jsonify({'error': f'Username "{username}" is already taken.'}), 409
+    if not username:
+        username = unique_username_from_email(email)
+
+    tech = Technician(
+        username=username,
+        password=generate_unusable_password_hash(),
+        role=role,
+        email=email,
+        display_name=display_name or None,
+        created_at=now_gmt8(),
+    )
     db.session.add(tech)
     db.session.commit()
 
-    log_audit('register', 'technician', tech.id, f'Registered new {role} "{username}".')
+    log_audit('register', 'technician', tech.id, f'Registered Google {role} "{username}" ({email}).')
     return jsonify({'success': True}), 201
 
 
@@ -997,6 +1268,7 @@ def api_list_technicians():
             'phone': t.phone,
             'profile_picture': t.profile_picture,
             'created_at': t.created_at,
+            'google_linked': bool(t.google_sub),
             'records_count': records_count,
         })
 
@@ -1052,27 +1324,7 @@ def api_admin_reset_password(tech_id):
     if admin_check:
         return admin_check
 
-    data = safe_get_json()
-    new_password = data.get('new_password', '')
-    confirm_password = data.get('confirm_password', '')
-
-    if not new_password:
-        return jsonify({'error': 'New password is required.'}), 400
-    if len(new_password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
-    if new_password != confirm_password:
-        return jsonify({'error': 'Passwords do not match.'}), 400
-
-    tech = Technician.query.get(tech_id)
-    if tech is None:
-        return jsonify({'error': 'Technician not found.'}), 404
-
-    tech.password = generate_password_hash(new_password)
-    db.session.commit()
-
-    log_audit('password_reset', 'technician', tech_id,
-              f'Admin reset password for "{tech.username}".')
-    return jsonify({'success': True})
+    return jsonify({'error': 'Password reset is disabled because Google sign-in is enabled.'}), 410
 
 
 @app.route('/api/technicians/<int:tech_id>', methods=['DELETE'])
@@ -1109,28 +1361,7 @@ def api_change_password():
     if user_id is None:
         return jsonify({'error': 'Authentication required.'}), 401
 
-    data = safe_get_json()
-    current_password = data.get('current_password', '')
-    new_password = data.get('new_password', '')
-    confirm_password = data.get('confirm_password', '')
-
-    if not current_password or not new_password:
-        return jsonify({'error': 'All fields are required.'}), 400
-    if len(new_password) < 6:
-        return jsonify({'error': 'New password must be at least 6 characters.'}), 400
-    if new_password != confirm_password:
-        return jsonify({'error': 'New passwords do not match.'}), 400
-
-    technician = Technician.query.get(user_id)
-
-    if not technician or not check_password_hash(technician.password, current_password):
-        return jsonify({'error': 'Current password is incorrect.'}), 403
-
-    technician.password = generate_password_hash(new_password)
-    db.session.commit()
-
-    log_audit('password_change', 'technician', user_id, f'User "{session.get("username")}" changed password.')
-    return jsonify({'success': True})
+    return jsonify({'error': 'Password change is disabled because Google sign-in is enabled.'}), 410
 
 
 @app.route('/api/user/profile-picture', methods=['POST'])
@@ -1857,10 +2088,26 @@ def internal_server_error(e):
 # ------------------------------------------
 # START THE APP
 # ------------------------------------------
+def ensure_auth_schema():
+    inspector = inspect(db.engine)
+    if 'technicians' not in inspector.get_table_names():
+        return
+
+    columns = {column['name'] for column in inspector.get_columns('technicians')}
+    indexes = {index['name'] for index in inspector.get_indexes('technicians')}
+
+    with db.engine.begin() as connection:
+        if 'google_sub' not in columns:
+            connection.execute(text('ALTER TABLE technicians ADD COLUMN google_sub VARCHAR(255)'))
+        if 'ix_technicians_google_sub' not in indexes:
+            connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS ix_technicians_google_sub ON technicians (google_sub)'))
+
+
 def initialize_runtime_state():
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     with app.app_context():
         db.create_all()
+        ensure_auth_schema()
         bootstrap_admin_from_env()
 
 # Run the app

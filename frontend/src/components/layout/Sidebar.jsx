@@ -16,7 +16,6 @@ const mainNav = [
 
 const settingsNav = [
   { to: '/profile', icon: 'account_circle', label: 'Update Profile' },
-  { to: '/change-password', icon: 'lock_reset', label: 'Change Password' },
 ];
 
 export default function Sidebar() {
@@ -78,7 +77,7 @@ export default function Sidebar() {
         {isAdmin && (
           <NavLink to="/register" className={linkClass}>
             <span className="material-symbols-outlined">person_add</span>
-            <span className="text-sm font-semibold">Register Technician</span>
+            <span className="text-sm font-semibold">Register Google Account</span>
           </NavLink>
         )}
         {/* Settings Dropdown */}

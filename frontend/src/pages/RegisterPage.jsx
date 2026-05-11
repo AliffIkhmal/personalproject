@@ -5,9 +5,9 @@ import { useToast } from '../contexts/ToastContext';
 import FloatingInput from '../components/ui/FloatingInput';
 
 export default function RegisterPage() {
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const [role, setRole] = useState('technician');
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
@@ -15,15 +15,19 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (username.length < 3) { addToast('Username must be at least 3 characters.', 'error'); return; }
-    if (password.length < 6) { addToast('Password must be at least 6 characters.', 'error'); return; }
-    if (password !== confirm) { addToast('Passwords do not match.', 'error'); return; }
+    if (!email.includes('@')) { addToast('Enter a valid Google email.', 'error'); return; }
+    if (username && username.length < 3) { addToast('Username must be at least 3 characters.', 'error'); return; }
 
     setLoading(true);
     try {
-      const data = await api.post('/register', { username, password, confirm_password: confirm, role });
+      const data = await api.post('/register', {
+        email,
+        display_name: displayName,
+        username,
+        role,
+      });
       if (data.success) {
-        addToast('Account created!', 'success');
+        addToast('Google account added!', 'success');
         navigate('/dashboard');
       } else {
         addToast(data.error || 'Registration failed.', 'error');
@@ -39,15 +43,15 @@ export default function RegisterPage() {
     <section className="flex-grow flex items-center justify-center p-8 bg-surface min-h-[calc(100vh-4rem)]">
       <div className="max-w-md w-full">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Register Technician</h2>
-          <p className="text-on-surface-variant mt-2 font-medium">Add a new specialist to the ServiceTrack network.</p>
+          <h2 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Register Google Account</h2>
+          <p className="text-on-surface-variant mt-2 font-medium">Add an authorized technician or admin email.</p>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl p-8 shadow-sm dark:shadow-slate-950/20 ring-1 ring-outline-variant/10">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <FloatingInput label="Username" icon="person" value={username} onChange={(e) => setUsername(e.target.value)} required />
-            <FloatingInput label="Password" icon="lock" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <FloatingInput label="Confirm Password" icon="shield" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            <FloatingInput label="Google Email" icon="alternate_email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <FloatingInput label="Display Name" icon="badge" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+            <FloatingInput label="Username (optional)" icon="person" value={username} onChange={(e) => setUsername(e.target.value)} />
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Role</label>
               <div className="flex gap-4">
@@ -65,7 +69,7 @@ export default function RegisterPage() {
             <div className="pt-2">
               <button type="submit" disabled={loading}
                 className="w-full py-4 rounded-xl indigo-pulse text-white font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60">
-                <span>{loading ? 'Creating...' : 'Create Account'}</span>
+                <span>{loading ? 'Adding...' : 'Add Google Account'}</span>
                 {!loading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
               </button>
             </div>

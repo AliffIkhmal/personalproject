@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import api, { assetUrl } from '../api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/ui/Modal';
-import FloatingInput from '../components/ui/FloatingInput';
 
 export default function TechniciansPage() {
   const [technicians, setTechnicians] = useState([]);
@@ -14,14 +13,11 @@ export default function TechniciansPage() {
 
   // Modals
   const [roleOpen, setRoleOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [target, setTarget] = useState(null);
 
   // Forms
   const [newRole, setNewRole] = useState('technician');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchTechnicians = useCallback(async () => {
@@ -53,13 +49,6 @@ export default function TechniciansPage() {
     setRoleOpen(true);
   };
 
-  const openResetModal = (tech) => {
-    setTarget(tech);
-    setNewPassword('');
-    setConfirmPassword('');
-    setResetOpen(true);
-  };
-
   const openDeleteModal = (tech) => {
     setTarget(tech);
     setDeleteOpen(true);
@@ -74,22 +63,6 @@ export default function TechniciansPage() {
       fetchTechnicians();
     } catch (err) {
       addToast(err.error || 'Failed to update role.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    if (newPassword.length < 6) { addToast('Password must be at least 6 characters.', 'error'); return; }
-    if (newPassword !== confirmPassword) { addToast('Passwords do not match.', 'error'); return; }
-    setSubmitting(true);
-    try {
-      await api.post(`/technicians/${target.id}/reset-password`, { new_password: newPassword, confirm_password: confirmPassword });
-      addToast(`Password reset for "${target.username}".`, 'success');
-      setResetOpen(false);
-    } catch (err) {
-      addToast(err.error || 'Failed to reset password.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +96,7 @@ export default function TechniciansPage() {
       {/* Header */}
       <div>
         <h2 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Manage Technicians</h2>
-        <p className="text-on-surface-variant mt-1 font-medium">View, edit roles, reset passwords, and remove accounts.</p>
+        <p className="text-on-surface-variant mt-1 font-medium">View Google-linked staff, edit roles, and remove accounts.</p>
       </div>
 
       {/* Search */}
@@ -175,6 +148,9 @@ export default function TechniciansPage() {
                           <p className="text-sm font-bold text-on-surface">{t.display_name || t.username}</p>
                           {t.display_name && <p className="text-xs text-slate-400 dark:text-slate-500">@{t.username}</p>}
                           {t.email && <p className="text-xs text-slate-400 dark:text-slate-500">{t.email}</p>}
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            {t.google_linked ? 'Google linked' : 'Pending Google sign-in'}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -193,9 +169,6 @@ export default function TechniciansPage() {
                       <div className="inline-flex items-center gap-1">
                         <button onClick={() => openRoleModal(t)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg transition-all" title="Change Role">
                           <span className="material-symbols-outlined text-lg">swap_horiz</span>
-                        </button>
-                        <button onClick={() => openResetModal(t)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-lg transition-all" title="Reset Password">
-                          <span className="material-symbols-outlined text-lg">lock_reset</span>
                         </button>
                         <button onClick={() => openDeleteModal(t)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete Technician">
                           <span className="material-symbols-outlined text-lg">delete</span>
@@ -257,26 +230,6 @@ export default function TechniciansPage() {
               </button>
             </div>
           </div>
-        )}
-      </Modal>
-
-      {/* ====== RESET PASSWORD MODAL ====== */}
-      <Modal open={resetOpen} onClose={() => setResetOpen(false)} title="Reset Password">
-        {target && (
-          <form onSubmit={handleResetPassword} className="space-y-6">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Set a new password for <span className="font-bold">{target.username}</span>.
-            </p>
-            <FloatingInput label="New Password" icon="lock" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-            <FloatingInput label="Confirm Password" icon="shield" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
-            <div className="flex gap-3 justify-end">
-              <button type="button" onClick={() => setResetOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Cancel</button>
-              <button type="submit" disabled={submitting}
-                className="px-5 py-2 text-sm font-bold text-white bg-sky-500 rounded-xl hover:bg-sky-600 disabled:opacity-50 transition-all">
-                {submitting ? 'Resetting...' : 'Reset Password'}
-              </button>
-            </div>
-          </form>
         )}
       </Modal>
 

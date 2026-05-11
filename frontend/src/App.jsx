@@ -9,7 +9,6 @@ import DashboardPage from './pages/DashboardPage';
 import SearchPage from './pages/SearchPage';
 import RecordDetailPage from './pages/RecordDetailPage';
 import RegisterPage from './pages/RegisterPage';
-import ChangePasswordPage from './pages/ChangePasswordPage';
 import ProfilePage from './pages/ProfilePage';
 import AuditLogPage from './pages/AuditLogPage';
 import TechniciansPage from './pages/TechniciansPage';
@@ -38,7 +37,7 @@ export default function App() {
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/technicians" element={<TechniciansPage />} />
-                <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route path="/change-password" element={<Navigate to="/profile" replace />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/audit-log" element={<AuditLogPage />} />
               </Route>

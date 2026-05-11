@@ -1,37 +1,31 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
-import api from '../api';
+import api, { apiUrl } from '../api';
 import FloatingInput from '../components/ui/FloatingInput';
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('technician');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [plate, setPlate] = useState('');
   const [loading, setLoading] = useState(false);
   const [customerResult, setCustomerResult] = useState(null);
-  const { login } = useAuth();
   const { addToast } = useToast();
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const data = await login(username, password);
-      if (data.success) {
-        addToast(`Welcome back, ${data.user.username}!`, 'success');
-        navigate('/dashboard');
-      } else {
-        addToast(data.error || 'Invalid credentials', 'error');
-      }
-    } catch (err) {
-      addToast(err?.error || 'Invalid username or password.', 'error');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const authError = searchParams.get('auth_error');
+    if (authError) {
+      addToast(authError, 'error');
+      setSearchParams({}, { replace: true });
     }
+  }, [addToast, searchParams, setSearchParams]);
+
+  const startGoogleLogin = () => {
+    const params = new URLSearchParams({
+      frontend_origin: window.location.origin,
+      next: '/dashboard',
+    });
+    window.location.assign(apiUrl(`/auth/google/start?${params.toString()}`));
   };
 
   const handleCustomerLookup = async (e) => {
@@ -103,18 +97,21 @@ export default function LoginPage() {
           {/* Content */}
           <div className="p-8">
             {activeTab === 'technician' ? (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <FloatingInput label="Username" icon="person" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                <FloatingInput label="Password" icon="lock" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div className="space-y-5">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={startGoogleLogin}
                   disabled={loading}
-                  className="w-full indigo-pulse text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-sky-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group mt-2 disabled:opacity-60"
+                  className="w-full bg-white dark:bg-slate-900 text-on-surface py-4 rounded-xl font-bold text-sm shadow-xl shadow-sky-500/10 border border-outline-variant/20 hover:border-sky-400 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group mt-2 disabled:opacity-60"
                 >
-                  <span>{loading ? 'Signing In...' : 'Sign In'}</span>
-                  {!loading && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>}
+                  <span className="material-symbols-outlined text-[20px] text-sky-500">account_circle</span>
+                  <span>Continue with Google</span>
+                  <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </button>
-              </form>
+                <p className="text-xs text-center text-on-surface-variant">
+                  Use the Google account registered by your administrator.
+                </p>
+              </div>
             ) : (
               <>
                 <form onSubmit={handleCustomerLookup} className="space-y-5">

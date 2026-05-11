@@ -26,18 +26,6 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  const login = async (username, password) => {
-    try {
-      const data = await api.post('/login', { username, password });
-      if (data.success) {
-        setUser(data.user);
-      }
-      return data;
-    } catch (err) {
-      throw err;
-    }
-  };
-
   const logout = async () => {
     await api.post('/logout');
     setUser(null);
@@ -48,7 +36,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, logout, checkAuth, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

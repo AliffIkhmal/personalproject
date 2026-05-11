@@ -14,7 +14,7 @@ A full-stack web application for managing and tracking vehicle maintenance and s
 
 ## Features
 
-- **Authentication** — Session-based login/logout, technician registration, password change
+- **Authentication** — Google OAuth sign-in with session-based logout and admin-managed staff emails
 - **User Profiles** — Profile picture upload, display name, email, phone, account stats
 - **Dashboard** — Service records table with sorting, filtering, pagination, and stat cards
 - **Record Management** — Full CRUD for service records with status workflow (Queued → In Progress → Completed)
@@ -26,8 +26,8 @@ A full-stack web application for managing and tracking vehicle maintenance and s
 - **Real-Time Updates** — WebSocket-powered live dashboard refresh across all connected clients
 - **Activity Log** — Full audit trail of all actions (create, update, delete, status changes, logins)
 - **Dark Mode** — Theme toggle with localStorage persistence and WCAG AA contrast ratios
-- **Security** — Rate limiting, CSRF protection, HTTP-only session cookies, input validation
-- **Responsive UI** — Modern color scheme, floating label inputs, password visibility toggles, and caps lock detection
+- **Security** — Rate limiting, CSRF protection, server-side Google ID token verification, HTTP-only session cookies, input validation
+- **Responsive UI** — Modern color scheme, floating label inputs, and mobile-friendly layouts
 ## Telegram Reminders & Chat ID Setup
 
 This app integrates with Telegram to send service reminders and appointment notifications to customers.
@@ -80,7 +80,6 @@ frontend/
 │       ├── RecordDetailPage.jsx    # Record detail with image gallery
 │       ├── AuditLogPage.jsx    # Activity/audit log viewer
 │       ├── ProfilePage.jsx     # Profile picture, info, and account stats
-│       ├── ChangePasswordPage.jsx  # Password change
 │       ├── RegisterPage.jsx    # Technician registration (admin)
 │       ├── LoginPage.jsx       # Login with customer status lookup
 │       └── ErrorPage.jsx       # 404 page
@@ -101,13 +100,27 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
-# Optional on a fresh database: bootstrap the first admin once
+# Optional on a fresh database: bootstrap the first Google admin once
 # Windows PowerShell:
-# $env:BOOTSTRAP_ADMIN_USERNAME="admin"
-# $env:BOOTSTRAP_ADMIN_PASSWORD="choose-a-strong-password"
+# $env:BOOTSTRAP_ADMIN_EMAIL="admin@example.com"
 python app.py
 ```
-The API runs on `http://localhost:5000`. A default admin is no longer created automatically. On a fresh database, set `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD` once before first startup, then remove them after the admin account is created.
+The API runs on `http://localhost:5000`. A default admin is no longer created automatically. On a fresh database, set `BOOTSTRAP_ADMIN_EMAIL` once before first startup, then remove it after the admin account is created.
+
+### Google OAuth
+
+Create a Google OAuth web client and set:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI` - for local dev, usually `http://localhost:5000/api/auth/google/callback`
+- `FRONTEND_URL` - for local Vite dev, `http://localhost:5173`
+
+Optional:
+
+- `GOOGLE_ALLOWED_DOMAINS` - comma-separated email domains allowed to sign in
+- `GOOGLE_AUTO_CREATE_USERS` - set `true` to allow first-time Google users to become technicians automatically; defaults to true outside production and false in production
+- `BOOTSTRAP_ADMIN_EMAIL` - promotes or creates this Google email as admin at startup
 
 ### Frontend
 ```sh
@@ -133,11 +146,11 @@ This repo includes a Docker-based deployment path for Railway.
 - `DATABASE_URL` — PostgreSQL connection string
 - `APP_ENV` — set to `production`
 - `ALLOWED_ORIGINS` — comma-separated allowed origins, including your Vercel frontend URL
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `FRONTEND_URL` — required for Google sign-in
 - `TELEGRAM_BOT_TOKEN` — Telegram Bot API token for sending reminders
 
 ### One-time environment variables for a fresh database
-- `BOOTSTRAP_ADMIN_USERNAME`
-- `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_ADMIN_EMAIL`
 
 Set these only for the first deploy to create the initial admin account. Remove them after the admin is created.
 

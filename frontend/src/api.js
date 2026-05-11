@@ -5,6 +5,10 @@ export function assetUrl(path) {
   return `${BACKEND_ORIGIN}${path}`;
 }
 
+export function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
+
 async function request(url, options = {}) {
   const config = {
     credentials: 'include',
